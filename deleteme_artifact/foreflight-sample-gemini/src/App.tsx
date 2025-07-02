@@ -1,7 +1,12 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Box, ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { Sidebar } from './components/Sidebar';
-import { FlightDetails } from './components/FlightDetails';
+import { Flights } from './pages/Flights';
+import { PreFlightCheck } from './pages/PreFlightCheck';
+import { Aircrafts } from './pages/Aircrafts';
+import { Logbook } from './pages/Logbook';
+import { TrackLogs } from './pages/TrackLogs';
 
 const theme = createTheme({
   palette: {
@@ -19,15 +24,24 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ 
-        display: 'flex', 
-        height: '100vh',
-        width: '1920px',
-        overflow: 'hidden'
-      }}>
-        <Sidebar />
-        <FlightDetails />
-      </Box>
+      <Router>
+        <Box sx={{ 
+          display: 'flex', 
+          height: '100vh',
+          width: '100%',
+          overflow: 'hidden'
+        }}>
+          <Sidebar />
+          <Routes>
+            <Route path="/" element={<Navigate to="/flights" replace />} />
+            <Route path="/flights" element={<Flights />} />
+            <Route path="/pre-flight" element={<PreFlightCheck />} />
+            <Route path="/aircrafts" element={<Aircrafts />} />
+            <Route path="/logbook" element={<Logbook />} />
+            <Route path="/track-logs" element={<TrackLogs />} />
+          </Routes>
+        </Box>
+      </Router>
     </ThemeProvider>
   );
 }

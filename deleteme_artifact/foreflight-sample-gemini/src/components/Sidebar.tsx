@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   List,
@@ -12,17 +13,12 @@ import {
 } from '@mui/material';
 import {
   FlightTakeoff,
-  Map,
-  Image,
-  Description,
+  WbSunny,
   Flight,
-  LocationOn,
   MenuBook,
   Timeline,
-  Folder,
-  TripOrigin,
-  LocalGasStation,
-  AccountCircle
+  Logout,
+  FlightLand
 } from '@mui/icons-material';
 
 const SidebarContainer = styled(Box)(({ theme }) => ({
@@ -51,6 +47,8 @@ const LogoText = styled(Typography)({
 const MenuContainer = styled(Box)({
   flex: 1,
   paddingTop: 14,
+  display: 'flex',
+  flexDirection: 'column',
 });
 
 const StyledListItemButton = styled(ListItemButton)<{ selected?: boolean }>(({ selected }) => ({
@@ -90,31 +88,33 @@ const SeparatorDivider = styled(Divider)({
 });
 
 const menuItems = [
-  { name: 'Flights', icon: FlightTakeoff, selected: true },
-  { name: 'Maps', icon: Map },
-  { name: 'Imagery', icon: Image },
-  { name: 'Documents', icon: Description },
-  { name: 'Aircraft', icon: Flight },
-  { name: 'Airports', icon: LocationOn },
-  { name: 'Logbook', icon: MenuBook },
-  { name: 'Track Logs', icon: Timeline },
-  { name: 'Directory', icon: Folder },
-  { name: 'Trip Assistant', icon: TripOrigin },
-];
-
-const bottomMenuItems = [
-  { name: 'JetFuelX', icon: LocalGasStation },
-  { name: 'Account', icon: AccountCircle },
+  { name: 'Flights', icon: FlightTakeoff, path: '/flights' },
+  { name: 'Pre-Flight Check', icon: WbSunny, path: '/pre-flight' },
+  { name: 'Aircrafts', icon: Flight, path: '/aircrafts' },
+  { name: 'Logbook', icon: MenuBook, path: '/logbook' },
+  { name: 'Track Logs', icon: Timeline, path: '/track-logs' },
 ];
 
 export const Sidebar: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+  };
+
+  const handleLogout = () => {
+    // ログアウト処理（後で実装）
+    console.log('Logout clicked');
+  };
+
   return (
     <SidebarContainer>
       {/* Logo Section */}
       <LogoContainer>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <FlightTakeoff sx={{ color: 'white', fontSize: '20px', mr: 1 }} />
-          <LogoText>ForeFlight</LogoText>
+          <FlightLand sx={{ color: 'white', fontSize: '20px', mr: 1 }} />
+          <LogoText>Centrosome</LogoText>
         </Box>
       </LogoContainer>
 
@@ -126,7 +126,10 @@ export const Sidebar: React.FC = () => {
         <List sx={{ padding: 0 }}>
           {menuItems.map((item) => (
             <ListItem key={item.name} disablePadding>
-              <StyledListItemButton selected={item.selected}>
+              <StyledListItemButton 
+                selected={location.pathname === item.path}
+                onClick={() => handleNavigation(item.path)}
+              >
                 <StyledListItemIcon>
                   <item.icon />
                 </StyledListItemIcon>
@@ -139,17 +142,15 @@ export const Sidebar: React.FC = () => {
         {/* Bottom section with spacer */}
         <Box sx={{ flexGrow: 1 }} />
         
-        <List sx={{ padding: 0 }}>
-          {bottomMenuItems.map((item) => (
-            <ListItem key={item.name} disablePadding>
-              <StyledListItemButton>
-                <StyledListItemIcon>
-                  <item.icon />
-                </StyledListItemIcon>
-                <StyledListItemText primary={item.name} />
-              </StyledListItemButton>
-            </ListItem>
-          ))}
+        <List sx={{ padding: 0, marginBottom: 2 }}>
+          <ListItem disablePadding>
+            <StyledListItemButton onClick={handleLogout}>
+              <StyledListItemIcon>
+                <Logout />
+              </StyledListItemIcon>
+              <StyledListItemText primary="Logout" />
+            </StyledListItemButton>
+          </ListItem>
         </List>
       </MenuContainer>
     </SidebarContainer>
