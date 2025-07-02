@@ -1,0 +1,26 @@
+[Unit]
+Description=Auto Start EC2 Instance on Boot
+After=network-online.target
+Wants=network-online.target
+Before=mavlink-raspi.service
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+User=pi
+ExecStart=/home/pi/Raspi-Persona/telepath/ec2-auto-start.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+# 環境変数（AWS認証情報）
+Environment="HOME=/home/pi"
+EnvironmentFile=-/home/pi/.aws/env
+
+# 再試行設定
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

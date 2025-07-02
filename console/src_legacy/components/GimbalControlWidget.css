@@ -1,0 +1,111 @@
+/* ジンバル制御ウィジェット専用スタイル */
+.gimbal-control-widget {
+  position: relative;
+}
+
+.gimbal-control-widget .MuiSlider-root {
+  color: #1976d2;
+}
+
+.gimbal-control-widget .MuiSlider-mark {
+  background-color: #1976d2;
+  height: 8px;
+  width: 2px;
+}
+
+.gimbal-control-widget .MuiSlider-markLabel {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.gimbal-control-widget .MuiSlider-valueLabel {
+  background-color: #1976d2;
+  color: white;
+  font-weight: 600;
+}
+
+.gimbal-control-widget .MuiButton-root:disabled {
+  opacity: 0.5;
+}
+
+/* プリセットボタンのホバー効果 */
+.gimbal-control-widget .preset-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.gimbal-control-widget .preset-button:hover:not(:disabled) {
+  background-color: #f5f5f5;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ジンバル制御中のローディング状態 */
+.gimbal-control-widget.controlling {
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.gimbal-control-widget.controlling::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* 接続状態のインジケーター */
+.gimbal-connection-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gimbal-connection-indicator.connected::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #4caf50;
+  animation: pulse 2s infinite;
+}
+
+.gimbal-connection-indicator.error::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #f44336;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .gimbal-control-widget .MuiSlider-markLabel {
+    font-size: 0.6rem;
+  }
+
+  .gimbal-control-widget .preset-buttons {
+    justify-content: center;
+  }
+
+  .gimbal-control-widget .preset-button {
+    min-width: 80px;
+  }
+}

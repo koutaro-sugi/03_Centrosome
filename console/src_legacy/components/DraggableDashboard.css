@@ -1,0 +1,161 @@
+/* DraggableDashboard.css */
+
+/* グリッドレイアウトの基本スタイル */
+.react-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
+  min-height: 100%;
+  padding-bottom: 50px; /* 各Widget下部に余白を追加 */
+}
+
+/* 編集モード時のスタイル */
+.layout.edit-mode .react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+  /* Widget内の余白確保 */
+  box-sizing: border-box;
+}
+
+.layout.edit-mode .react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+
+/* リサイズハンドルの強調表示 */
+.layout.edit-mode .react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  background: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/Pg08IS0tIEdlbmVyYXRlZCBieSBJY29Nb29uLmlvIC0tPg08c3ZnIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KPGc+CjwvZz4KCTxwYXRoIGQ9Ik00OTYuMTMxIDQzNS42OThsLTQyLjkwOSA0Mi45MDljLTguNDUgOC40NS0yMi4xNDEgOC40NS0zMC41OTEgMGwtMjczLjA2My0yNzMuMDYzYy04LjQ1LTguNDUtOC40NS0yMi4xNDEgMC0zMC41OTFsNDIuOTA5LTQyLjkwOWM4LjQ1LTguNDUgMjIuMTQxLTguNDUgMzAuNTkxIDBsMjczLjA2MyAyNzMuMDYzYzguNDUgOC40NSA4LjQ1IDIyLjE0MSAwIDMwLjU5MXoiIGZpbGw9IiMwMDAiIC8+Cjwvc3ZnPg==');
+  background-position: bottom right;
+  padding: 0 3px 3px 0;
+  background-repeat: no-repeat;
+  background-origin: content-box;
+  box-sizing: border-box;
+  cursor: se-resize;
+  z-index: 10;
+}
+
+/* リサイズ中のハンドル */
+.layout.edit-mode .react-grid-item.resizing > .react-resizable-handle {
+  background-color: rgba(25, 118, 210, 0.2);
+  border: 2px solid #1976d2;
+}
+
+/* ドラッグ中のアイテム */
+.layout.edit-mode .react-grid-item.dragging {
+  z-index: 100;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  opacity: 0.9;
+}
+
+/* プレースホルダー（ドロップ予定位置） */
+.react-grid-item.react-grid-placeholder {
+  background: rgba(0, 0, 0, 0.1);
+  opacity: 0.2;
+  transition-duration: 100ms;
+  z-index: 2;
+  border: 2px dashed #333;
+  border-radius: 8px;
+}
+
+/* スクロールコンテナの改善 */
+.dashboard-scroll-container {
+  position: relative;
+  height: 100%;
+  overflow: auto; /* 縦横両方のスクロールを許可 */
+  scroll-behavior: smooth;
+}
+
+/* GridLayoutラッパー - スクロール範囲確保 */
+.grid-layout-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+  padding-bottom: 150px; /* 下部の余白を増やす */
+}
+
+/* スクロール時にリサイズハンドルが見えるように */
+.dashboard-scroll-container::-webkit-scrollbar {
+  width: 16px; /* より見やすく */
+  height: 16px;
+}
+
+.dashboard-scroll-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+  margin: 10px 0; /* 上下に余白 */
+}
+
+.dashboard-scroll-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 8px;
+  border: 2px solid #f1f1f1;
+}
+
+.dashboard-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* スクロールバーコーナー */
+.dashboard-scroll-container::-webkit-scrollbar-corner {
+  background: #f1f1f1;
+}
+
+/* Widget境界警告スタイル */
+.widget-out-of-bounds {
+  border: 2px solid #ff5722 !important;
+  animation: pulse-border 1s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0% {
+    border-color: #ff5722;
+  }
+  50% {
+    border-color: #ff9800;
+  }
+  100% {
+    border-color: #ff5722;
+  }
+}
+
+/* デバッグモード表示 */
+.widget-debug-info {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  font-size: 10px;
+  z-index: 1000;
+  border-radius: 0 0 0 4px;
+  font-family: monospace;
+}
+
+/* 範囲外Widget救出ボタン */
+.rescue-widgets-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  background-color: #ff5722;
+  color: white;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}

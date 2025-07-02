@@ -1,0 +1,92 @@
+/* バーチャルジョイスティック専用スタイル */
+.joystick-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.joystick-container.dragging {
+  /* ドラッグ中の視覚効果 */
+}
+
+.joystick-container.disabled {
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
+.joystick-knob {
+  position: absolute;
+  will-change: transform;
+  z-index: 10;
+}
+
+/* タッチデバイス用の調整 */
+@media (pointer: coarse) {
+  .joystick-container {
+    /* タッチデバイスでのタッチ精度向上 */
+    touch-action: manipulation;
+  }
+
+  .joystick-knob {
+    /* タッチ時のノブサイズを少し大きく */
+    transform: scale(1.1);
+  }
+}
+
+/* アニメーション効果 */
+.joystick-container:hover .joystick-knob {
+  transition: box-shadow 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+}
+
+.joystick-container.dragging .joystick-knob {
+  z-index: 20;
+  transition: none;
+}
+
+/* フォーカス状態 */
+.joystick-container:focus-within {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+/* 高コントラストモード対応 */
+@media (prefers-contrast: high) {
+  .joystick-container {
+    border-color: #000;
+    background: #fff;
+  }
+
+  .joystick-knob {
+    border-color: #000;
+    background: #f0f0f0;
+  }
+}
+
+/* リデュースモーション対応 */
+@media (prefers-reduced-motion: reduce) {
+  .joystick-knob {
+    transition: none !important;
+  }
+
+  .joystick-container {
+    transition: none !important;
+  }
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+  .joystick-container {
+    /* モバイルデバイスでの操作性向上 */
+    min-width: 150px;
+    min-height: 150px;
+  }
+}
+
+/* ドラッグ防止（画像などの） */
+.joystick-container * {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
