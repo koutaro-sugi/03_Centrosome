@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, Button, IconButton, styled } from '@mui/material';
 import { Settings } from '@mui/icons-material';
 import { MapCard } from '../components/MapCard';
+import { useFlightPlan } from '../contexts/FlightPlanContext';
 
 const MainContainer = styled(Box)({
   flex: 1,
@@ -36,6 +37,7 @@ const ContentSection = styled(Box, {
 
 export const PreFlight: React.FC = () => {
   const [configMode, setConfigMode] = useState(false);
+  const { selectedPlan } = useFlightPlan();
 
   return (
     <MainContainer>
@@ -74,7 +76,8 @@ export const PreFlight: React.FC = () => {
         <MapCard 
           initialPosition={{ x: 40, y: 40 }} 
           configMode={configMode} 
-          mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
+          mapStyle="mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0"
+          flightPlan={selectedPlan}
         />
       </ContentSection>
     </MainContainer>

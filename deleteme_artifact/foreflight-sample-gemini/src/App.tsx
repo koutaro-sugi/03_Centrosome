@@ -7,6 +7,7 @@ import { PreFlight } from './pages/PreFlight';
 import { Aircrafts } from './pages/Aircrafts';
 import { Logbook } from './pages/Logbook';
 import { TrackLogs } from './pages/TrackLogs';
+import { FlightPlanProvider } from './contexts/FlightPlanContext';
 
 const theme = createTheme({
   palette: {
@@ -68,7 +69,8 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
+      <FlightPlanProvider>
+        <Router>
         <Box sx={{ 
           display: 'flex', 
           height: '100vh',
@@ -86,6 +88,7 @@ function App() {
           </Routes>
         </Box>
       </Router>
+      </FlightPlanProvider>
     </ThemeProvider>
   );
 }

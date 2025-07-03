@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Box, Paper, styled } from '@mui/material';
+import { Box, Paper, styled, IconButton } from '@mui/material';
+import { Close, Visibility } from '@mui/icons-material';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -30,6 +31,37 @@ const MapContainer = styled(Box)({
     right: 0,
     width: '100%',
     height: '100%',
+  },
+});
+
+const StatusPanel = styled(Box)({
+  position: 'absolute',
+  top: 10,
+  left: 10,
+  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  padding: '12px 16px',
+  borderRadius: '8px',
+  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+  minWidth: 200,
+  zIndex: 5,
+  fontSize: '12px',
+  '& h4': {
+    margin: '0 0 8px 0',
+    fontSize: '14px',
+    fontWeight: 600,
+    color: '#32495f',
+  },
+  '& .status-item': {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginBottom: '4px',
+    '& span:first-of-type': {
+      color: '#666',
+    },
+    '& span:last-of-type': {
+      fontWeight: 500,
+      color: '#333',
+    },
   },
 });
 
@@ -83,12 +115,14 @@ interface MapCardProps {
   initialPosition?: { x: number; y: number };
   configMode?: boolean;
   mapStyle?: string;
+  flightPlan?: any; // TODO: 型定義を追加
 }
 
 export const MapCard: React.FC<MapCardProps> = ({ 
   initialPosition = { x: 100, y: 100 },
   configMode = false,
-  mapStyle = 'mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0'
+  mapStyle = 'mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0',
+  flightPlan = null
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -98,6 +132,7 @@ export const MapCard: React.FC<MapCardProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [size, setSize] = useState({ width: 600, height: 600 });
   const [resizeStart, setResizeStart] = useState({ width: 600, height: 600, x: 0, y: 0 });
+  const [showStatus, setShowStatus] = useState(true);
 
   // Mapbox初期化
   useEffect(() => {
@@ -146,6 +181,7 @@ export const MapCard: React.FC<MapCardProps> = ({
 
       map.on('style.load', () => {
         console.log('Style loaded event fired');
+        // デフォルトでは何も表示しない
       });
 
       mapRef.current = map;
@@ -227,6 +263,179 @@ export const MapCard: React.FC<MapCardProps> = ({
     }
   }, [isDragging, isResizing, dragStart, resizeStart]);
 
+  // .planファイルのデータが更新されたときの処理
+  useEffect(() => {
+    if (!mapRef.current || !flightPlan) return;
+
+    const map = mapRef.current;
+
+    // マップがロードされているか確認
+    if (!map.loaded()) {
+      map.once('load', () => {
+        updateFlightPlan(map, flightPlan);
+      });
+      return;
+    }
+
+    updateFlightPlan(map, flightPlan);
+  }, [flightPlan]);
+
+  const updateFlightPlan = (map: mapboxgl.Map, flightPlan: any) => {
+    try {
+      console.log('Updating flight plan:', flightPlan);
+      
+      // 既存のflightPlanレイヤーを削除
+      if (map.getLayer('plan-path-line')) map.removeLayer('plan-path-line');
+      if (map.getSource('plan-path')) map.removeSource('plan-path');
+      if (map.getLayer('plan-waypoints')) map.removeLayer('plan-waypoints');
+      if (map.getLayer('plan-waypoint-labels')) map.removeLayer('plan-waypoint-labels');
+      if (map.getSource('plan-waypoints')) map.removeSource('plan-waypoints');
+
+    // mission itemsから座標を抽出
+    const coordinates: [number, number][] = [];
+    const waypoints: any[] = [];
+
+    flightPlan.mission.items.forEach((item: any, index: number) => {
+      console.log(`Item ${index}:`, item);
+      
+      if (item.type === 'SimpleItem' && item.params) {
+        let lat, lng;
+        
+        // MAVLinkのコマンドによって座標の位置が異なる
+        if (item.command === 16) { // NAV_WAYPOINT
+          lat = item.params[4];
+          lng = item.params[5];
+        } else if (item.command === 22) { // NAV_TAKEOFF
+          // TAKEOFFは通常現在位置で実行されるが、plannedHomePositionを使用
+          if (flightPlan.mission.plannedHomePosition) {
+            lat = flightPlan.mission.plannedHomePosition[0];
+            lng = flightPlan.mission.plannedHomePosition[1];
+          } else {
+            // plannedHomePositionがない場合はスキップ
+            console.warn('TAKEOFF command but no plannedHomePosition found');
+            return;
+          }
+        } else {
+          // その他のコマンドも params[4], params[5] を試す
+          lat = item.params[4];
+          lng = item.params[5];
+        }
+        
+        // 座標の検証
+        if (lat !== undefined && lng !== undefined && 
+            lat !== null && lng !== null &&
+            lat >= -90 && lat <= 90 && 
+            lng >= -180 && lng <= 180) {
+          coordinates.push([lng, lat]); // GeoJSONは[longitude, latitude]の順
+          waypoints.push({
+            type: 'Feature',
+            properties: {
+              index: index + 1,
+              altitude: item.Altitude || item.params[6], // params[6]が高度の場合もある
+              command: item.command,
+              isTakeoff: item.command === 22,
+              isLanding: item.command === 21, // NAV_LAND
+            },
+            geometry: {
+              type: 'Point',
+              coordinates: [lng, lat],
+            },
+          });
+        } else {
+          console.warn(`Invalid or missing coordinates at item ${index}: lat=${lat}, lng=${lng}, command=${item.command}`);
+        }
+      }
+    });
+
+    console.log(`Found ${coordinates.length} waypoints:`, coordinates);
+    
+    if (coordinates.length > 0) {
+      // 飛行経路を追加
+      map.addSource('plan-path', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: coordinates,
+          },
+        },
+      });
+
+      map.addLayer({
+        id: 'plan-path-line',
+        type: 'line',
+        source: 'plan-path',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': '#FF6B6B',
+          'line-width': 3,
+        },
+      });
+
+      // ウェイポイントを追加
+      map.addSource('plan-waypoints', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: waypoints,
+        },
+      });
+
+      map.addLayer({
+        id: 'plan-waypoints',
+        type: 'circle',
+        source: 'plan-waypoints',
+        paint: {
+          'circle-radius': [
+            'case',
+            ['get', 'isTakeoff'], 12,  // TAKEOFFは大きく
+            ['get', 'isLanding'], 12,  // LANDINGも大きく
+            8  // その他は通常サイズ
+          ],
+          'circle-color': [
+            'case',
+            ['get', 'isTakeoff'], '#4CAF50',  // 緑
+            ['get', 'isLanding'], '#2196F3',   // 青
+            '#FF6B6B'  // 赤（通常のウェイポイント）
+          ],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff',
+        },
+      });
+      
+      // ウェイポイントのラベルを追加
+      map.addLayer({
+        id: 'plan-waypoint-labels',
+        type: 'symbol',
+        source: 'plan-waypoints',
+        layout: {
+          'text-field': ['get', 'index'],
+          'text-size': 12,
+          'text-offset': [0, -1.5],
+        },
+        paint: {
+          'text-color': '#ffffff',
+          'text-halo-color': '#000000',
+          'text-halo-width': 1,
+        },
+      });
+
+      // 最初の座標にズーム
+      map.flyTo({
+        center: coordinates[0],
+        zoom: 14,
+      });
+    }
+    } catch (error) {
+      console.error('Error updating flight plan:', error);
+    }
+  };
+
   return (
     <DraggableCard
       style={{
@@ -240,6 +449,60 @@ export const MapCard: React.FC<MapCardProps> = ({
         <MoveHandle onMouseDown={handleMoveStart} />
       )}
       <MapContainer ref={mapContainer} />
+      {showStatus && (
+        <StatusPanel>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h4>フライトステータス</h4>
+            <IconButton 
+              size="small" 
+              onClick={() => setShowStatus(false)}
+              sx={{ padding: 0, marginLeft: 1 }}
+            >
+              <Close fontSize="small" />
+            </IconButton>
+          </Box>
+        <div className="status-item">
+          <span>機体:</span>
+          <span>Drone Alpha</span>
+        </div>
+        <div className="status-item">
+          <span>高度:</span>
+          <span>120m</span>
+        </div>
+        <div className="status-item">
+          <span>速度:</span>
+          <span>45km/h</span>
+        </div>
+        <div className="status-item">
+          <span>バッテリー:</span>
+          <span style={{ color: '#4CAF50' }}>85%</span>
+        </div>
+        <div className="status-item">
+          <span>飛行時間:</span>
+          <span>12:34</span>
+        </div>
+        <div className="status-item">
+          <span>GPS信号:</span>
+          <span style={{ color: '#4CAF50' }}>良好</span>
+        </div>
+        </StatusPanel>
+      )}
+      {!showStatus && (
+        <IconButton
+          onClick={() => setShowStatus(true)}
+          sx={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            '&:hover': { backgroundColor: 'rgba(255, 255, 255, 1)' },
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
+          }}
+          size="small"
+        >
+          <Visibility />
+        </IconButton>
+      )}
       {configMode && (
         <ResizeHandle onMouseDown={handleResizeStart} />
       )}

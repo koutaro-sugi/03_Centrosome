@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -11,6 +11,8 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
+import { UploadFile, Map as MapIcon } from '@mui/icons-material';
+import { useFlightPlan } from '../contexts/FlightPlanContext';
 
 const MainContainer = styled(Box)({
   flex: 1,
@@ -89,10 +91,14 @@ const StyledSelect = styled('select')({
 });
 
 export const FlightDetails: React.FC = () => {
-  const [expandedSections, setExpandedSections] = React.useState({
+  const [expandedSections, setExpandedSections] = useState({
     flightFuel: true,
     fuelAtLanding: true,
   });
+  const [departure, setDeparture] = useState('---');
+  const [destination, setDestination] = useState('---');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addPlan, setSelectedPlan, uploadedPlans, selectedPlan } = useFlightPlan();
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({
@@ -101,25 +107,176 @@ export const FlightDetails: React.FC = () => {
     }));
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.name.endsWith('.plan')) {
+      alert('.planファイルを選択してください');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const planData = JSON.parse(e.target?.result as string);
+        
+        // .planファイルの検証
+        if (planData.fileType !== 'Plan' || !planData.mission) {
+          alert('無効なプランファイル形式です');
+          return;
+        }
+
+        addPlan(file.name, planData);
+        alert(`プランファイル "${file.name}" をアップロードしました`);
+      } catch (error) {
+        alert('プランファイルの読み込みに失敗しました');
+        console.error(error);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSendToMap = () => {
+    if (!uploadedPlans || uploadedPlans.length === 0) {
+      alert('プランファイルをアップロードしてください');
+      return;
+    }
+    
+    // 最後にアップロードされたプランを選択
+    const latestPlan = uploadedPlans[uploadedPlans.length - 1];
+    setSelectedPlan(latestPlan.plan);
+    alert(`"${latestPlan.name}" をマップに送信しました`);
+  };
+
+  // 座標から地名を推定（簡易版）
+  const getLocationName = (lat: number, lng: number): string => {
+    // 日本の主要地点の座標と地名のマッピング
+    const locations = [
+      { name: '福江', lat: 32.6958, lng: 128.8415, radius: 0.1 },
+      { name: '長崎', lat: 32.7503, lng: 129.8779, radius: 0.1 },
+      { name: '東京', lat: 35.6762, lng: 139.6503, radius: 0.1 },
+      { name: '羽田', lat: 35.5494, lng: 139.7798, radius: 0.1 },
+      { name: '成田', lat: 35.7720, lng: 140.3929, radius: 0.1 },
+    ];
+
+    for (const loc of locations) {
+      const distance = Math.sqrt(
+        Math.pow(lat - loc.lat, 2) + Math.pow(lng - loc.lng, 2)
+      );
+      if (distance < loc.radius) {
+        return loc.name;
+      }
+    }
+    
+    return `${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+  };
+
+  // selectedPlanが変わったら地名を更新
+  useEffect(() => {
+    if (selectedPlan && selectedPlan.mission && selectedPlan.mission.items) {
+      const items = selectedPlan.mission.items;
+      
+      // 離陸地点を探す
+      const takeoffItem = items.find((item: any) => item.command === 22);
+      if (takeoffItem && selectedPlan.mission.plannedHomePosition) {
+        const lat = selectedPlan.mission.plannedHomePosition[0];
+        const lng = selectedPlan.mission.plannedHomePosition[1];
+        setDeparture(getLocationName(lat, lng));
+      }
+      
+      // 着陸地点を探す（最後のウェイポイント）
+      const waypointItems = items.filter((item: any) => item.command === 16);
+      if (waypointItems.length > 0) {
+        const lastWaypoint = waypointItems[waypointItems.length - 1];
+        if (lastWaypoint.params && lastWaypoint.params[4] && lastWaypoint.params[5]) {
+          const lat = lastWaypoint.params[4];
+          const lng = lastWaypoint.params[5];
+          setDestination(getLocationName(lat, lng));
+        }
+      }
+    }
+  }, [selectedPlan]);
+
   return (
     <MainContainer>
       {/* Header */}
       <HeaderSection>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
           <Typography sx={{ fontSize: '15px', fontWeight: 600, color: 'white' }}>
-            FUJ to NGS
+            {departure && destination ? `${departure} to ${destination}` : 'No Plan Selected'}
           </Typography>
           <Typography sx={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.8)' }}>
             Dec 01, 1:12:39 AM JST
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <Button size="small" sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}>Send To Map</Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".plan"
+            style={{ display: 'none' }}
+          />
+          <Button 
+            size="small" 
+            sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}
+            startIcon={<UploadFile sx={{ fontSize: '14px' }} />}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Upload Plan
+          </Button>
+          <Button 
+            size="small" 
+            sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}
+            onClick={handleSendToMap}
+          >
+            Send To Map
+          </Button>
           <Button size="small" sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}>Show Map</Button>
         </Box>
       </HeaderSection>
 
       <ContentSection>
+        {/* Uploaded Plans Section */}
+        <SectionCard>
+          <CardContent>
+            <SectionTitle>アップロード済みプラン</SectionTitle>
+            {uploadedPlans.length === 0 ? (
+              <Typography sx={{ fontSize: '12px', color: '#999' }}>
+                プランファイルがアップロードされていません
+              </Typography>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {uploadedPlans.map((plan, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      backgroundColor: '#f5f5f5',
+                      borderRadius: '4px',
+                    }}
+                  >
+                    <Typography sx={{ fontSize: '12px' }}>{plan.name}</Typography>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      sx={{ fontSize: '10px', minHeight: '24px' }}
+                      onClick={() => {
+                        setSelectedPlan(plan.plan);
+                        alert(`"${plan.name}" をマップに送信しました`);
+                      }}
+                    >
+                      マップに送信
+                    </Button>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </CardContent>
+        </SectionCard>
+        
         {/* Overview Section */}
         <SectionCard>
           <CardContent>
@@ -135,25 +292,18 @@ export const FlightDetails: React.FC = () => {
               </Box>
               <Box sx={{ flex: '1 1 16%' }}>
                 <Typography sx={{ fontSize: '10px', color: '#666' }}>Departure</Typography>
-                <Typography sx={{ fontSize: '12px', fontWeight: 'bold' }}>PUTT</Typography>
+                <Typography sx={{ fontSize: '12px', fontWeight: 'bold' }}>{departure}</Typography>
               </Box>
               <Box sx={{ flex: '1 1 16%' }}>
                 <Typography sx={{ fontSize: '10px', color: '#666' }}>Destination</Typography>
-                <Typography sx={{ fontSize: '12px', fontWeight: 'bold' }}>NRT</Typography>
-              </Box>
-              <Box sx={{ flex: '1 1 16%' }}>
-                <Typography sx={{ fontSize: '10px', color: '#666' }}>FLIGHT FUEL</Typography>
-                <Typography sx={{ fontSize: '12px', fontWeight: 'bold' }}>59 g</Typography>
-              </Box>
-              <Box sx={{ flex: '1 1 16%' }}>
-                <Typography sx={{ fontSize: '10px', color: '#666' }}>WHO</Typography>
-                <Typography sx={{ fontSize: '12px', fontWeight: 'bold' }}>3 hrs tail</Typography>
+                <Typography sx={{ fontSize: '12px', fontWeight: 'bold' }}>{destination}</Typography>
               </Box>
             </Box>
             
             <Box sx={{ mt: 2 }}>
               <Typography sx={{ fontSize: '10px', color: '#666' }}>Aircraft</Typography>
-              <StyledSelect value="AA (SF50)">
+              <StyledSelect defaultValue="DrN-40 (VTOL)">
+                <option value="DrN-40 (VTOL)">DrN-40 (VTOL)</option>
                 <option value="AA (SF50)">AA (SF50)</option>
                 <option value="BB (SF60)">BB (SF60)</option>
                 <option value="CC (SF70)">CC (SF70)</option>
@@ -162,7 +312,7 @@ export const FlightDetails: React.FC = () => {
           </CardContent>
         </SectionCard>
 
-        {/* Route Section */}
+        {false && (
         <SectionCard>
           <CardContent>
             <SectionTitle>ROUTE</SectionTitle>
@@ -185,12 +335,12 @@ export const FlightDetails: React.FC = () => {
             </Box>
           </CardContent>
         </SectionCard>
+        )}
 
-        {/* Payload, Fuel, Weights Combined Section */}
+        {false && (
         <SectionCard>
           <CardContent>
             <Box sx={{ display: 'flex', gap: 4 }}>
-              {/* Payload Section */}
               <Box sx={{ flex: '1 1 33%' }}>
                 <SectionTitle>PAYLOAD</SectionTitle>
                 <Typography sx={{ fontSize: '11px', color: '#666', mb: 1, fontWeight: 'bold' }}>
@@ -386,8 +536,9 @@ export const FlightDetails: React.FC = () => {
             </Box>
           </CardContent>
         </SectionCard>
+        )}
 
-        {/* Bottom Sections */}
+        {false && (
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Box sx={{ flex: '1 1 50%' }}>
             <SectionCard>
@@ -428,6 +579,7 @@ export const FlightDetails: React.FC = () => {
             </SectionCard>
           </Box>
         </Box>
+        )}
 
       </ContentSection>
       
