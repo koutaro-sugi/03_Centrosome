@@ -8,7 +8,6 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
-  Divider,
   styled
 } from '@mui/material';
 import {
@@ -18,7 +17,7 @@ import {
   MenuBook,
   Timeline,
   Logout,
-  FlightLand
+  Hub
 } from '@mui/icons-material';
 
 const SidebarContainer = styled(Box)(({ theme }) => ({
@@ -82,14 +81,10 @@ const StyledListItemText = styled(ListItemText)({
   },
 });
 
-const SeparatorDivider = styled(Divider)({
-  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-  margin: '10px 8px',
-});
 
 const menuItems = [
   { name: 'Flights', icon: FlightTakeoff, path: '/flights' },
-  { name: 'Pre-Flight Check', icon: WbSunny, path: '/pre-flight' },
+  { name: 'Pre-Flight', icon: WbSunny, path: '/pre-flight' },
   { name: 'Aircrafts', icon: Flight, path: '/aircrafts' },
   { name: 'Logbook', icon: MenuBook, path: '/logbook' },
   { name: 'Track Logs', icon: Timeline, path: '/track-logs' },
@@ -112,14 +107,17 @@ export const Sidebar: React.FC = () => {
     <SidebarContainer>
       {/* Logo Section */}
       <LogoContainer>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <FlightLand sx={{ color: 'white', fontSize: '20px', mr: 1 }} />
-          <LogoText>Centrosome</LogoText>
-        </Box>
+        <img 
+          src="/logo/Centra.svg" 
+          alt="Centrosome"
+          style={{ 
+            height: '20px', 
+            width: 'auto',
+            filter: 'brightness(0) invert(1)'  // SVGを白色に変換
+          }}
+        />
       </LogoContainer>
 
-      <SeparatorDivider />
-      <SeparatorDivider />
 
       {/* Main Menu */}
       <MenuContainer>
