@@ -116,23 +116,28 @@ interface MapCardProps {
   configMode?: boolean;
   mapStyle?: string;
   flightPlan?: any; // TODO: 型定義を追加
+  telemetry?: any; // テレメトリデータ
+  showAircraft?: boolean; // 機体を表示するか
 }
 
 export const MapCard: React.FC<MapCardProps> = ({ 
   initialPosition = { x: 100, y: 100 },
   configMode = false,
   mapStyle = 'mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0',
-  flightPlan = null
+  flightPlan = null,
+  telemetry = null,
+  showAircraft = false
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const aircraftMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [size, setSize] = useState({ width: 600, height: 600 });
   const [resizeStart, setResizeStart] = useState({ width: 600, height: 600, x: 0, y: 0 });
-  const [showStatus, setShowStatus] = useState(true);
+  const [showStatus, setShowStatus] = useState(false);
 
   // Mapbox初期化
   useEffect(() => {
@@ -194,6 +199,10 @@ export const MapCard: React.FC<MapCardProps> = ({
 
       return () => {
         resizeObserver.disconnect();
+        if (aircraftMarkerRef.current) {
+          aircraftMarkerRef.current.remove();
+          aircraftMarkerRef.current = null;
+        }
         map.remove();
         mapRef.current = null;
       };
@@ -201,6 +210,55 @@ export const MapCard: React.FC<MapCardProps> = ({
       console.error('Failed to initialize map:', error);
     }
   }, [mapStyle]);
+
+  // 機影の表示・更新
+  useEffect(() => {
+    if (!mapRef.current || !showAircraft || !telemetry?.lat || !telemetry?.lon) return;
+
+    const map = mapRef.current;
+
+    // 機影マーカーの作成または更新
+    if (!aircraftMarkerRef.current) {
+      // 機影用のDIV要素を作成
+      const el = document.createElement('div');
+      el.style.width = '40px';
+      el.style.height = '40px';
+      el.style.backgroundImage = 'url(/drn40.svg)';
+      el.style.backgroundSize = 'contain';
+      el.style.backgroundRepeat = 'no-repeat';
+      el.style.transformOrigin = 'center';
+      // SVGを白色にして、黒い輪郭線を追加
+      el.style.filter = 'brightness(0) invert(1) drop-shadow(0 0 2px rgba(0,0,0,0.8)) drop-shadow(0 0 1px rgba(0,0,0,1))';
+
+      // マーカーを作成
+      aircraftMarkerRef.current = new mapboxgl.Marker({
+        element: el,
+        rotationAlignment: 'map',
+        pitchAlignment: 'map',
+        rotation: 0, // 初期回転を0に設定
+      })
+        .setLngLat([telemetry.lon, telemetry.lat])
+        .addTo(map);
+    } else {
+      // 位置を更新
+      aircraftMarkerRef.current.setLngLat([telemetry.lon, telemetry.lat]);
+    }
+
+    // 機首方向を更新
+    // Mapboxは北が0度で時計回り、航空機のheadingも北が0度で時計回り
+    if (telemetry.heading !== undefined) {
+      // Mapboxのrotationは度単位で時計回り
+      aircraftMarkerRef.current.setRotation(telemetry.heading);
+    }
+
+    // マップの中心を機体位置に移動（オプション）
+    if (telemetry.connected) {
+      map.easeTo({
+        center: [telemetry.lon, telemetry.lat],
+        duration: 1000,
+      });
+    }
+  }, [telemetry, showAircraft]);
 
   // グリッドスナップ関数
   const snapToGrid = (value: number, gridSize: number = 20) => {
@@ -392,10 +450,25 @@ export const MapCard: React.FC<MapCardProps> = ({
         source: 'plan-waypoints',
         paint: {
           'circle-radius': [
-            'case',
-            ['get', 'isTakeoff'], 12,  // TAKEOFFは大きく
-            ['get', 'isLanding'], 12,  // LANDINGも大きく
-            8  // その他は通常サイズ
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            // ズームレベルに応じてサイズを調整
+            8, ['case',  // ズーム8以下
+              ['get', 'isTakeoff'], 6,
+              ['get', 'isLanding'], 6,
+              4
+            ],
+            12, ['case',  // ズーム12
+              ['get', 'isTakeoff'], 8,
+              ['get', 'isLanding'], 8,
+              6
+            ],
+            16, ['case',  // ズーム16以上
+              ['get', 'isTakeoff'], 12,
+              ['get', 'isLanding'], 12,
+              8
+            ]
           ],
           'circle-color': [
             'case',
@@ -403,7 +476,14 @@ export const MapCard: React.FC<MapCardProps> = ({
             ['get', 'isLanding'], '#2196F3',   // 青
             '#FF6B6B'  // 赤（通常のウェイポイント）
           ],
-          'circle-stroke-width': 2,
+          'circle-stroke-width': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            8, 1,    // ズーム8以下
+            12, 1.5, // ズーム12
+            16, 2    // ズーム16以上
+          ],
           'circle-stroke-color': '#ffffff',
         },
       });

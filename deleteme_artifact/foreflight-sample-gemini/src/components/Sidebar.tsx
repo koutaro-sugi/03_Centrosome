@@ -85,6 +85,7 @@ const StyledListItemText = styled(ListItemText)({
 const menuItems = [
   { name: 'Flights', icon: FlightTakeoff, path: '/flights' },
   { name: 'Pre-Flight', icon: WbSunny, path: '/pre-flight' },
+  { name: 'In-Flight', icon: Hub, path: '/in-flight' },
   { name: 'Aircrafts', icon: Flight, path: '/aircrafts' },
   { name: 'Logbook', icon: MenuBook, path: '/logbook' },
   { name: 'Track Logs', icon: Timeline, path: '/track-logs' },

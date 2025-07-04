@@ -4,6 +4,7 @@ import { Box, ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { Sidebar } from './components/Sidebar';
 import { Flights } from './pages/Flights';
 import { PreFlight } from './pages/PreFlight';
+import { InFlight } from './pages/InFlight';
 import { Aircrafts } from './pages/Aircrafts';
 import { Logbook } from './pages/Logbook';
 import { TrackLogs } from './pages/TrackLogs';
@@ -82,6 +83,7 @@ function App() {
             <Route path="/" element={<Navigate to="/flights" replace />} />
             <Route path="/flights" element={<Flights />} />
             <Route path="/pre-flight" element={<PreFlight />} />
+            <Route path="/in-flight" element={<InFlight />} />
             <Route path="/aircrafts" element={<Aircrafts />} />
             <Route path="/logbook" element={<Logbook />} />
             <Route path="/track-logs" element={<TrackLogs />} />
