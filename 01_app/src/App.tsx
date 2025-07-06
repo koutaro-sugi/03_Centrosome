@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Box, ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { Sidebar } from './components/Sidebar';
 import { Flights } from './pages/Flights';
+import { Plan } from './pages/Plan';
 import { PreFlight } from './pages/PreFlight';
 import { InFlight } from './pages/InFlight';
 import { Aircrafts } from './pages/Aircrafts';
@@ -82,6 +83,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/flights" replace />} />
             <Route path="/flights" element={<Flights />} />
+            <Route path="/plan" element={<Plan />} />
             <Route path="/pre-flight" element={<PreFlight />} />
             <Route path="/in-flight" element={<InFlight />} />
             <Route path="/aircrafts" element={<Aircrafts />} />

@@ -9,9 +9,10 @@ export const useFlightPlanStorage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [plans, setPlans] = useState<FlightPlan[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
 
   // フライトプランを保存
-  const savePlan = useCallback(async (plan: MissionPlan, name: string, description?: string) => {
+  const savePlan = useCallback(async (name: string, plan: MissionPlan, overview?: any) => {
     setLoading(true);
     setError(null);
     
@@ -22,10 +23,17 @@ export const useFlightPlanStorage = () => {
         id: planId,
         userId: TEMP_USER_ID,
         name,
-        description,
+        description: overview?.description,
         waypoints: plan.mission?.items || [],
         status: 'draft',
         planData: plan, // 元のMissionPlanデータをそのまま保存
+        overview: overview ? {
+          aircraft: overview.aircraft,
+          pilotInCommand: overview.pilotInCommand,
+          omcLocation: overview.omcLocation,
+          duration: overview.duration,
+          description: overview.description,
+        } : undefined,
       });
       
       console.log('Flight plan saved:', savedPlan);
@@ -41,22 +49,28 @@ export const useFlightPlanStorage = () => {
 
   // フライトプラン一覧を取得
   const loadPlans = useCallback(async () => {
-    setLoading(true);
+    // 既にロード中の場合はスキップ
+    if (isLoadingPlans) return plans;
+    
+    setIsLoadingPlans(true);
     setError(null);
     
     try {
       const loadedPlans = await flightPlanAPI.listByUser(TEMP_USER_ID);
       setPlans(loadedPlans);
-      console.log('Loaded flight plans:', loadedPlans);
+      // デバッグログは開発環境のみ
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Loaded flight plans:', loadedPlans);
+      }
       return loadedPlans;
     } catch (err) {
       console.error('Failed to load flight plans:', err);
       setError(err instanceof Error ? err.message : 'Failed to load flight plans');
       return [];
     } finally {
-      setLoading(false);
+      setIsLoadingPlans(false);
     }
-  }, []);
+  }, [isLoadingPlans, plans]);
 
   // 特定のフライトプランを取得
   const loadPlan = useCallback(async (planId: string) => {
@@ -119,7 +133,7 @@ export const useFlightPlanStorage = () => {
 
   return {
     plans,
-    loading,
+    loading: loading || isLoadingPlans,
     error,
     savePlan,
     loadPlans,

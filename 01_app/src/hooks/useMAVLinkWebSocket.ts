@@ -16,10 +16,12 @@ declare global {
     mavlinkStatsTimer?: NodeJS.Timeout;
     heartbeatLogged?: { [key: number]: boolean };
     vfrHudLogged?: boolean;
+    vfrHudDebug?: boolean;
     airspeedAutocalLogged?: boolean;
     airspeedLogged?: boolean;
     navControllerLogged?: boolean;
     dumpedMessages?: Set<number>;
+    enableMavlinkStats?: boolean;
   }
 }
 
@@ -117,30 +119,19 @@ export const useMAVLinkWebSocket = ({
               // プロトコルバージョンを検出
               if (message.header.magic === 0xFD && protocolVersion !== 'v2') {
                 setProtocolVersion('v2');
-                console.log('MAVLink v2プロトコルを検出');
               } else if (message.header.magic === 0xFE && protocolVersion !== 'v1') {
                 setProtocolVersion('v1');
-                console.log('MAVLink v1プロトコルを検出');
               }
               
-              // デバッグ用：受信メッセージの統計を定期的に出力
-              if (!window.mavlinkStats) {
-                window.mavlinkStats = {};
-                window.mavlinkStatsTimer = setInterval(() => {
-                  console.log('=== MAVLink メッセージ統計 (過去5秒) ===');
-                  const stats = window.mavlinkStats || {};
-                  const sorted = Object.entries(stats)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 20);
-                  sorted.forEach(([msgId, count]) => {
-                    const msgIdNum = parseInt(msgId);
-                    const msgName = MAVLinkMessageType[msgIdNum] || 'UNKNOWN';
-                    console.log(`ID ${msgId} (${msgName}): ${count}回`);
-                  });
+              // メッセージ統計を有効化（デバッグ用、必要時のみ）
+              // window.enableMavlinkStats = true で有効化
+              if (window.enableMavlinkStats) {
+                if (!window.mavlinkStats) {
                   window.mavlinkStats = {};
-                }, 5000);
+                }
+                const msgId = message.header.msgid;
+                window.mavlinkStats[msgId] = (window.mavlinkStats[msgId] || 0) + 1;
               }
-              window.mavlinkStats[message.header.msgid] = (window.mavlinkStats[message.header.msgid] || 0) + 1;
               
               switch (message.header.msgid) {
             case MAVLinkMessageType.HEARTBEAT: {
@@ -203,22 +194,37 @@ export const useMAVLinkWebSocket = ({
             }
             
             case MAVLinkMessageType.VFR_HUD: {
+              // 初回のみペイロードをダンプ
+              if (!window.vfrHudDebug) {
+                window.vfrHudDebug = true;
+                console.log('[VFR_HUD] ペイロードダンプ:', parser.current.dumpPayload(74, message.payload));
+              }
+              
               const hud = parser.current.parseVfrHud(message.payload);
               if (hud) {
-                // デバッグ用：初回のVFR_HUDデータをログ出力
+                // パース後のデータを表示
                 if (!window.vfrHudLogged) {
                   window.vfrHudLogged = true;
-                  console.log('VFR_HUD データ:', hud);
+                  console.log('[VFR_HUD] Parsed data:', {
+                    airspeed: hud.airspeed,
+                    groundspeed: hud.groundspeed,
+                    throttle: hud.throttle,
+                    alt: hud.alt,
+                    heading: hud.heading,
+                    climb: hud.climb
+                  });
                 }
                 setTelemetry(prev => ({
                   ...prev,
-                  airSpeed: hud.airspeed,
-                  groundSpeed: hud.groundspeed,
-                  heading: hud.heading,
-                  throttle: hud.throttle,
-                  alt: hud.alt,
-                  verticalSpeed: hud.climb,
+                  airSpeed: hud.airspeed,      // Vehicle speed (CAS/IAS) m/s
+                  groundSpeed: hud.groundspeed, // Ground speed m/s
+                  heading: hud.heading,         // Heading in degrees (0-360)
+                  throttle: hud.throttle,       // Throttle percentage (0-100)
+                  alt: hud.alt,                 // Altitude MSL in meters
+                  verticalSpeed: hud.climb,     // Climb rate m/s
                 }));
+              } else {
+                console.error('[VFR_HUD] パース失敗！');
               }
               break;
             }
@@ -289,11 +295,14 @@ export const useMAVLinkWebSocket = ({
             case MAVLinkMessageType.NAV_CONTROLLER_OUTPUT: {
               const nav = parser.current.parseNavControllerOutput(message.payload);
               if (nav) {
-                // デバッグ用：初回のNAV_CONTROLLER_OUTPUTデータをログ出力
+                // デバッグログを追加
                 if (!window.navControllerLogged) {
                   window.navControllerLogged = true;
-                  console.log('NAV_CONTROLLER_OUTPUT データ:', nav);
-                  console.log('NAV_CONTROLLER_OUTPUT ペイロードダンプ:', parser.current.dumpPayload(62, message.payload));
+                  console.log('[NAV_CONTROLLER_OUTPUT] Received:', {
+                    wpDist: nav.wpDist,
+                    targetBearing: nav.targetBearing,
+                    navBearing: nav.navBearing
+                  });
                 }
                 setTelemetry(prev => ({
                   ...prev,
@@ -316,11 +325,12 @@ export const useMAVLinkWebSocket = ({
               if (mission) {
                 setTelemetry(prev => ({
                   ...prev,
-                  missionCurrent: mission.seq,
+                  currentWaypoint: mission.seq,
                 }));
               }
               break;
             }
+            
             
             case MAVLinkMessageType.SERVO_OUTPUT_RAW: {
               const servo = parser.current.parseServoOutputRaw(message.payload);
@@ -687,6 +697,14 @@ export const useMAVLinkWebSocket = ({
               break;
             }
             
+            case MAVLinkMessageType.STATUSTEXT: {
+              const statusText = parser.current.parseStatusText(message.payload);
+              if (statusText) {
+                console.log(`[ARDUPILOT] ${statusText.text}`);
+              }
+              break;
+            }
+            
             default: {
               // 未処理のメッセージのペイロードをダンプ（初回のみ）
               if (!window.dumpedMessages) {
@@ -697,6 +715,11 @@ export const useMAVLinkWebSocket = ({
                 const msgName = MAVLinkMessageType[message.header.msgid] || 'UNKNOWN';
                 console.log(`=== 未処理メッセージのペイロードダンプ: ID ${message.header.msgid} (${msgName}) ===`);
                 console.log(parser.current.dumpPayload(message.header.msgid, message.payload));
+                
+                // VFR_HUDメッセージを特別にチェック
+                if (message.header.msgid === 74) {
+                  console.log('!!! VFR_HUD (ID: 74) が未処理メッセージとして検出されました !!!');
+                }
               }
               break;
             }

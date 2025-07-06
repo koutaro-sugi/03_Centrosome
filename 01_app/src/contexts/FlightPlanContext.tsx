@@ -36,7 +36,7 @@ interface FlightPlanContextType {
   setSelectedPlan: (plan: FlightPlan | null) => void;
   uploadedPlans: { name: string; plan: FlightPlan }[];
   addPlan: (name: string, plan: FlightPlan) => void;
-  updateFlightPlan: (plan: FlightPlan) => void;
+  updateFlightPlan: (plan: FlightPlan | null) => void;
 }
 
 const FlightPlanContext = createContext<FlightPlanContextType | undefined>(undefined);
@@ -49,7 +49,7 @@ export const FlightPlanProvider: React.FC<{ children: ReactNode }> = ({ children
     setUploadedPlans(prev => [...prev, { name, plan }]);
   };
 
-  const updateFlightPlan = (plan: FlightPlan) => {
+  const updateFlightPlan = (plan: FlightPlan | null) => {
     setSelectedPlan(plan);
   };
 

@@ -139,6 +139,44 @@ export const InFlight: React.FC = () => {
   const [configMode, setConfigMode] = useState(false);
   const { selectedPlan } = useFlightPlan();
   
+  // 画面サイズに基づいてMapCardの初期サイズを計算
+  const calculateInitialMapSize = () => {
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    
+    // 画面サイズに応じて適切なサイズを計算
+    // デスクトップ: 画面の50-60%程度
+    // タブレット: 画面の60-70%程度
+    // モバイル: 画面の80-90%程度
+    let widthRatio = 0.5;
+    let heightRatio = 0.6;
+    
+    if (screenWidth <= 768) { // モバイル
+      widthRatio = 0.85;
+      heightRatio = 0.7;
+    } else if (screenWidth <= 1024) { // タブレット
+      widthRatio = 0.65;
+      heightRatio = 0.65;
+    } else if (screenWidth <= 1440) { // 小さめのデスクトップ
+      widthRatio = 0.55;
+      heightRatio = 0.6;
+    }
+    
+    // グリッドにスナップして返す
+    const snapToGrid = (value: number, gridSize: number = 20) => {
+      return Math.round(value / gridSize) * gridSize;
+    };
+    
+    return {
+      width: snapToGrid(Math.min(screenWidth * widthRatio, 1200)), // 最大幅1200px
+      height: snapToGrid(Math.min(screenHeight * heightRatio, 800)) // 最大高さ800px
+    };
+  };
+  
+  // MapCardの位置とサイズをLocalStorageに保持
+  const [mapPosition, setMapPosition] = useLocalStorage('inflight_map_position', { x: 40, y: 40 });
+  const [mapSize, setMapSize] = useLocalStorage('inflight_map_size', calculateInitialMapSize());
+  
   // LocalStorageから設定を読み込む
   const [telemetryViewMode, setTelemetryViewMode] = useLocalStorage<'list' | 'inspector'>('inflight_telemetry_view_mode', 'list');
   const [telemetryPosition, setTelemetryPosition] = useLocalStorage('inflight_telemetry_position', { x: 700, y: 40 });
@@ -410,11 +448,29 @@ export const InFlight: React.FC = () => {
     setDragStart({ x: e.clientX - telemetryPosition.x, y: e.clientY - telemetryPosition.y });
   };
 
+  // グリッドスナップ関数
+  const snapToGrid = (value: number, gridSize: number = 20) => {
+    return Math.round(value / gridSize) * gridSize;
+  };
+
   const handleDragMove = (e: MouseEvent) => {
     if (!isDragging) return;
+    
+    const newX = snapToGrid(e.clientX - dragStart.x);
+    const newY = snapToGrid(e.clientY - dragStart.y);
+    
+    // 画面境界をチェック - コンポーネント全体が画面内に収まるように
+    const minX = 0; // 左端
+    const maxX = window.innerWidth - telemetrySize.width; // 右端
+    const minY = 0; // 上端
+    const maxY = window.innerHeight - telemetrySize.height; // 下端
+    
+    const boundedX = Math.max(minX, Math.min(maxX, newX));
+    const boundedY = Math.max(minY, Math.min(maxY, newY));
+    
     setTelemetryPosition({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
+      x: boundedX,
+      y: boundedY,
     });
   };
 
@@ -439,9 +495,20 @@ export const InFlight: React.FC = () => {
     if (!isResizing) return;
     const deltaX = e.clientX - resizeStart.x;
     const deltaY = e.clientY - resizeStart.y;
+    
+    const newWidth = Math.max(280, snapToGrid(resizeStart.width + deltaX));
+    const newHeight = Math.max(300, snapToGrid(resizeStart.height + deltaY));
+    
+    // リサイズ時も画面内に収まるようにチェック
+    const maxWidth = window.innerWidth - telemetryPosition.x - 20; // 右端に余裕を持たせる
+    const maxHeight = window.innerHeight - telemetryPosition.y - 20; // 下端に余裕を持たせる
+    
+    const boundedWidth = Math.min(newWidth, maxWidth);
+    const boundedHeight = Math.min(newHeight, maxHeight);
+    
     setTelemetrySize({
-      width: Math.max(280, resizeStart.width + deltaX),
-      height: Math.max(300, resizeStart.height + deltaY),
+      width: boundedWidth,
+      height: boundedHeight,
     });
   };
 
@@ -471,6 +538,41 @@ export const InFlight: React.FC = () => {
       };
     }
   }, [isResizing, resizeStart]);
+  
+  // ウィンドウリサイズ時の境界チェックとMapCardサイズ調整
+  useEffect(() => {
+    const handleWindowResize = () => {
+      // テレメトリパネルが画面内に収まるように位置を調整
+      setTelemetryPosition(prev => ({
+        x: Math.min(prev.x, Math.max(0, window.innerWidth - telemetrySize.width)),
+        y: Math.min(prev.y, Math.max(0, window.innerHeight - telemetrySize.height))
+      }));
+      
+      // MapCardのサイズを画面サイズに応じて自動調整
+      if (!configMode) { // 設定モードでない場合のみ
+        const newMapSize = calculateInitialMapSize();
+        setMapSize(prev => {
+          // アスペクト比を維持しつつサイズを調整
+          const aspectRatio = prev.width / prev.height;
+          const newWidth = newMapSize.width;
+          const newHeight = Math.round(newWidth / aspectRatio);
+          
+          // グリッドにスナップ
+          const snapToGrid = (value: number, gridSize: number = 20) => {
+            return Math.round(value / gridSize) * gridSize;
+          };
+          
+          return {
+            width: snapToGrid(newWidth),
+            height: snapToGrid(Math.min(newHeight, window.innerHeight * 0.8))
+          };
+        });
+      }
+    };
+    
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [telemetrySize.width, telemetrySize.height, configMode]);
 
   // ステータスアイコンを取得
   const getStatusIcon = () => {
@@ -492,7 +594,7 @@ export const InFlight: React.FC = () => {
     const protocolText = protocolVersion ? ` • MAVLink ${protocolVersion}` : '';
     switch (status) {
       case 'connected':
-        return `Connected (${messageCount} msgs)${protocolText}`;
+        return `Connected${protocolText}`;
       case 'weak':
         return `Weak Signal${protocolText}`;
       case 'connecting':
@@ -513,16 +615,10 @@ export const InFlight: React.FC = () => {
             In-Flight Monitoring
           </Typography>
           <Typography sx={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.8)' }}>
-            Live Telemetry & Control
+            Live Telemetry
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <Button size="small" sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}>
-            Return to Launch
-          </Button>
-          <Button size="small" sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}>
-            Emergency Stop
-          </Button>
           <IconButton 
             size="small" 
             onClick={() => setConfigMode(!configMode)}
@@ -538,14 +634,42 @@ export const InFlight: React.FC = () => {
 
       {/* Content with Grid Background */}
       <ContentSection configMode={configMode}>
-        <MapCard 
-          initialPosition={{ x: 40, y: 40 }} 
-          configMode={configMode} 
-          mapStyle="mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0"
-          flightPlan={selectedPlan}
-          telemetry={telemetry}
-          showAircraft={true}
-        />
+        {configMode ? (
+          <MapCard 
+            initialPosition={mapPosition} 
+            configMode={configMode} 
+            mapStyle="mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0"
+            flightPlan={selectedPlan}
+            telemetry={telemetry}
+            showAircraft={true}
+            size={mapSize}
+            onPositionChange={setMapPosition}
+            onSizeChange={setMapSize}
+            pageId="inflight"
+          />
+        ) : (
+          <Box sx={{
+            position: 'absolute',
+            left: mapPosition.x,
+            top: mapPosition.y,
+            width: mapSize.width,
+            height: mapSize.height,
+            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
+            borderRadius: 2,
+            overflow: 'hidden',
+          }}>
+            <MapCard 
+              initialPosition={mapPosition} 
+              configMode={configMode} 
+              mapStyle="mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0"
+              flightPlan={selectedPlan}
+              telemetry={telemetry}
+              showAircraft={true}
+              size={mapSize}
+              pageId="inflight"
+            />
+          </Box>
+        )}
         
         {/* Telemetry Panel Card */}
         <TelemetryCard 
@@ -569,31 +693,31 @@ export const InFlight: React.FC = () => {
           )}
           <CardContent sx={{ p: 2, height: '100%', overflow: 'auto' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600 }}>
+                Telemetry
+              </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600 }}>
-                  Telemetry Panel
-                </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   {getStatusIcon()}
                   <Typography sx={{ fontSize: '11px', color: 'text.secondary' }}>
                     {getStatusText()}
                   </Typography>
                 </Box>
+                <ToggleButtonGroup
+                  value={telemetryViewMode}
+                  exclusive
+                  onChange={(e, newMode) => newMode && setTelemetryViewMode(newMode)}
+                  size="small"
+                  sx={{ height: 24 }}
+                >
+                  <ToggleButton value="list" sx={{ py: 0, px: 1 }}>
+                    <ViewList sx={{ fontSize: 16 }} />
+                  </ToggleButton>
+                  <ToggleButton value="inspector" sx={{ py: 0, px: 1 }}>
+                    <BugReport sx={{ fontSize: 16 }} />
+                  </ToggleButton>
+                </ToggleButtonGroup>
               </Box>
-              <ToggleButtonGroup
-                value={telemetryViewMode}
-                exclusive
-                onChange={(e, newMode) => newMode && setTelemetryViewMode(newMode)}
-                size="small"
-                sx={{ height: 24 }}
-              >
-                <ToggleButton value="list" sx={{ py: 0, px: 1 }}>
-                  <ViewList sx={{ fontSize: 16 }} />
-                </ToggleButton>
-                <ToggleButton value="inspector" sx={{ py: 0, px: 1 }}>
-                  <BugReport sx={{ fontSize: 16 }} />
-                </ToggleButton>
-              </ToggleButtonGroup>
             </Box>
             
             <Divider sx={{ mb: 1 }} />

@@ -5,6 +5,11 @@ export enum MAVLinkMessageType {
   HEARTBEAT = 0,
   SYS_STATUS = 1,
   SYSTEM_TIME = 2,
+  PING = 4,
+  PARAM_REQUEST_READ = 20,
+  PARAM_REQUEST_LIST = 21,
+  PARAM_VALUE = 22,
+  PARAM_SET = 23,
   GPS_RAW_INT = 24,
   GPS_STATUS = 25,
   SCALED_IMU = 26,
@@ -19,16 +24,24 @@ export enum MAVLinkMessageType {
   RC_CHANNELS_RAW = 35,
   SERVO_OUTPUT_RAW = 36,
   MISSION_CURRENT = 42,
+  MISSION_COUNT = 44,
   MISSION_ITEM_REACHED = 46,
+  MISSION_ACK = 47,
+  MISSION_REQUEST_INT = 51,
   NAV_CONTROLLER_OUTPUT = 62,
+  REQUEST_DATA_STREAM = 66,
+  DATA_STREAM = 67,
+  MISSION_ITEM_INT = 73,
   VFR_HUD = 74,
   COMMAND_ACK = 77,
+  TIMESYNC = 111,
   SCALED_IMU2 = 116,
   POWER_STATUS = 125,
   GPS2_RAW = 124,
   SCALED_IMU3 = 129,
   TERRAIN_REPORT = 136,
   ALTITUDE = 141,
+  AUTOPILOT_VERSION = 148,
   BATTERY_STATUS = 147,
   MEMINFO = 152,
   AHRS = 163,
@@ -208,6 +221,7 @@ export interface TelemetryData {
   
   // ミッション
   missionCurrent?: number; // 現在のミッション番号
+  currentWaypoint?: number; // 現在のウェイポイント番号（missionCurrentのエイリアス）
   missionItemReached?: number; // 到達したミッション番号
   
   // サーボ/RC
@@ -698,4 +712,52 @@ export interface ParsedAirspeed {
   temperature: number;
   rawPress: number;
   flags: number;
+}
+
+// STATUSTEXT メッセージ
+export interface ParsedStatusText {
+  severity: number;
+  text: string;
+  id?: number;       // MAVLink v2 only
+  chunkSeq?: number; // MAVLink v2 only
+}
+
+// PARAM_VALUE メッセージ
+export interface ParsedParamValue {
+  paramValue: number;
+  paramCount: number;
+  paramIndex: number;
+  paramId: string;
+  paramType: number;
+}
+
+// COMMAND_ACK メッセージ
+export interface ParsedCommandAck {
+  command: number;
+  result: number;
+  progress?: number;      // MAVLink v2 only
+  resultParam2?: number;  // MAVLink v2 only
+  targetSystem?: number;  // MAVLink v2 only
+  targetComponent?: number; // MAVLink v2 only
+}
+
+// AUTOPILOT_VERSION メッセージ
+export interface ParsedAutopilotVersion {
+  capabilities: number;
+  flightSwVersion: number;
+  middlewareSwVersion: number;
+  osSwVersion: number;
+  boardVersion: number;
+  flightCustomVersion: number[];
+  middlewareCustomVersion: number[];
+  osCustomVersion: number[];
+  vendorId: number;
+  productId: number;
+  uid: number;
+}
+
+// TIMESYNC メッセージ
+export interface ParsedTimesync {
+  tc1: number;
+  ts1: number;
 }

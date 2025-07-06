@@ -1,12 +1,14 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, GetCommand, QueryCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 
-// デバッグ用に環境変数を確認
-console.log('AWS Config:', {
-  region: process.env.REACT_APP_AWS_REGION,
-  accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID?.substring(0, 10) + '...',
-  hasSecret: !!process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
-});
+// デバッグログは開発環境のみ
+if (process.env.NODE_ENV === 'development') {
+  console.log('AWS Config:', {
+    region: process.env.REACT_APP_AWS_REGION,
+    accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID?.substring(0, 10) + '...',
+    hasSecret: !!process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
+  });
+}
 
 // DynamoDBクライアントの設定
 const client = new DynamoDBClient({
@@ -44,6 +46,13 @@ export interface FlightPlan {
   updatedAt: string;
   status: 'draft' | 'active' | 'completed' | 'archived';
   planData: any; // 元の.planファイルの内容
+  overview?: {
+    aircraft: string;
+    pilotInCommand: string;
+    omcLocation: string;
+    duration: string;
+    description: string;
+  };
 }
 
 // キー生成ヘルパー

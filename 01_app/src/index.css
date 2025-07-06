@@ -11,3 +11,24 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Mapboxマーカーのアニメーションを無効化 */
+.mapboxgl-marker {
+  transition: none !important;
+  animation: none !important;
+}
+
+.mapboxgl-marker > * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* 機体マーカー専用のスタイル */
+.mapboxgl-aircraft-marker,
+.mapboxgl-aircraft-marker * {
+  transition: none !important;
+  animation: none !important;
+  opacity: 1 !important;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}

@@ -17,7 +17,8 @@ import {
   MenuBook,
   Timeline,
   Logout,
-  Hub
+  Hub,
+  Description
 } from '@mui/icons-material';
 
 const SidebarContainer = styled(Box)(({ theme }) => ({
@@ -37,11 +38,11 @@ const LogoContainer = styled(Box)({
   padding: '0 12px',
 });
 
-const LogoText = styled(Typography)({
-  color: 'white',
-  fontWeight: 'bold',
-  fontSize: '14px',
-});
+// const LogoText = styled(Typography)({
+//   color: 'white',
+//   fontWeight: 'bold',
+//   fontSize: '14px',
+// });
 
 const MenuContainer = styled(Box)({
   flex: 1,
@@ -83,6 +84,7 @@ const StyledListItemText = styled(ListItemText)({
 
 
 const menuItems = [
+  { name: 'Plan', icon: Description, path: '/plan' },
   { name: 'Flights', icon: FlightTakeoff, path: '/flights' },
   { name: 'Pre-Flight', icon: WbSunny, path: '/pre-flight' },
   { name: 'In-Flight', icon: Hub, path: '/in-flight' },

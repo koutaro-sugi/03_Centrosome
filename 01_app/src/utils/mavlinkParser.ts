@@ -43,6 +43,11 @@ import {
   ParsedAirspeedAutocal,
   ParsedAoaSsa,
   ParsedAirspeed,
+  ParsedStatusText,
+  ParsedParamValue,
+  ParsedCommandAck,
+  ParsedAutopilotVersion,
+  ParsedTimesync,
 } from '../types/mavlink';
 
 // MAVLinkマジックバイト
@@ -226,10 +231,21 @@ export class MAVLinkParser {
 
   // VFR_HUD メッセージをパース
   parseVfrHud(payload: Uint8Array): ParsedVfrHud | null {
-    // VFR_HUDメッセージは最低20バイト必要
+    // VFR_HUD (ID: 74)
+    // MAVLink v1: 20バイト
+    // フィールド:
+    // - airspeed: float (4 bytes) @ 0
+    // - groundspeed: float (4 bytes) @ 4
+    // - heading: int16 (2 bytes) @ 8
+    // - throttle: uint16 (2 bytes) @ 10
+    // - alt: float (4 bytes) @ 12
+    // - climb: float (4 bytes) @ 16
+    
     if (payload.length < 20) {
+      console.warn(`[VFR_HUD] ペイロードサイズが不正: ${payload.length}バイト (期待: 20バイト)`);
       return null;
     }
+    
     return {
       airspeed: this.getFloat32(payload, 0),
       groundspeed: this.getFloat32(payload, 4),
@@ -316,26 +332,25 @@ export class MAVLinkParser {
   // NAV_CONTROLLER_OUTPUT メッセージをパース
   parseNavControllerOutput(payload: Uint8Array): ParsedNavControllerOutput | null {
     if (payload.length < 26) return null;
-    // デバッグ用：各フィールドの値を個別に確認
+    
+    
+    // MAVLink標準仕様に基づくフィールド解析
+    // 公式ドキュメントではnav_roll/nav_pitchは度単位だが、実際はラジアンで送信される場合が多い
+    // bearingフィールドはセンチ度（1/100度）でエンコードされている
     const result = {
-      navRoll: this.getFloat32(payload, 0),
-      navPitch: this.getFloat32(payload, 4),
-      navBearing: this.getInt16(payload, 8),
-      targetBearing: this.getInt16(payload, 10),
-      wpDist: this.getUint16(payload, 12),
-      altError: this.getFloat32(payload, 14),
-      aspdError: this.getFloat32(payload, 18),
-      xtrackError: this.getFloat32(payload, 22),
+      navRoll: this.getFloat32(payload, 0),            // offset 0: float rad - ロール角（ラジアン）
+      navPitch: this.getFloat32(payload, 4),           // offset 4: float rad - ピッチ角（ラジアン）
+      navBearing: this.getInt16(payload, 8) / 100,     // offset 8: int16_t cdeg - 現在の目標方位（センチ度→度）
+      targetBearing: this.getInt16(payload, 10) / 100, // offset 10: int16_t cdeg - ウェイポイントへの方位（センチ度→度）
+      wpDist: this.getUint16(payload, 12),             // offset 12: uint16_t m - ウェイポイントまでの距離（メートル）
+      altError: this.getFloat32(payload, 14),          // offset 14: float m - 高度誤差（メートル）
+      aspdError: this.getFloat32(payload, 18),         // offset 18: float m/s - 対気速度誤差（m/s）
+      xtrackError: this.getFloat32(payload, 22),       // offset 22: float m - クロストラック誤差（メートル）
     };
     
-    // デバッグ用：wpDistの周辺バイトを確認
-    if (!this.navDebugLogged) {
-      this.navDebugLogged = true;
-      console.log('NAV_CONTROLLER_OUTPUT wpDist周辺のバイト:');
-      console.log(`  バイト[10-11] (targetBearing): ${payload[10]} ${payload[11]} → ${result.targetBearing}`);
-      console.log(`  バイト[12-13] (wpDist): ${payload[12]} ${payload[13]} → ${result.wpDist}`);
-      console.log(`  バイト[14-17] (altError): ${payload[14]} ${payload[15]} ${payload[16]} ${payload[17]} → ${result.altError}`);
-    }
+    // ラジアンを度に変換（roll/pitchフィールド）
+    result.navRoll = result.navRoll * 180 / Math.PI;
+    result.navPitch = result.navPitch * 180 / Math.PI;
     
     return result;
   }
@@ -776,6 +791,108 @@ export class MAVLinkParser {
     };
   }
 
+  // STATUSTEXT メッセージをパース
+  parseStatusText(payload: Uint8Array): ParsedStatusText | null {
+    if (payload.length < 51) return null;
+    
+    // 文字列を抽出（null終端）
+    let text = '';
+    for (let i = 1; i < 51 && payload[i] !== 0; i++) {
+      text += String.fromCharCode(payload[i]);
+    }
+    
+    const result: ParsedStatusText = {
+      severity: payload[0],
+      text: text.trim(),
+    };
+    
+    // MAVLink v2フィールド
+    if (payload.length >= 54) {
+      result.id = this.getUint16(payload, 51);
+      result.chunkSeq = payload[53];
+    }
+    
+    return result;
+  }
+
+  // PARAM_VALUE メッセージをパース
+  parseParamValue(payload: Uint8Array): ParsedParamValue | null {
+    if (payload.length < 25) return null;
+    
+    // パラメータIDを抽出（null終端）
+    let paramId = '';
+    for (let i = 8; i < 24 && payload[i] !== 0; i++) {
+      paramId += String.fromCharCode(payload[i]);
+    }
+    
+    return {
+      paramValue: this.getFloat32(payload, 0),
+      paramCount: this.getUint16(payload, 4),
+      paramIndex: this.getUint16(payload, 6),
+      paramId: paramId.trim(),
+      paramType: payload[24],
+    };
+  }
+
+  // COMMAND_ACK メッセージをパース
+  parseCommandAck(payload: Uint8Array): ParsedCommandAck | null {
+    if (payload.length < 3) return null;
+    
+    const result: ParsedCommandAck = {
+      command: this.getUint16(payload, 0),
+      result: payload[2],
+    };
+    
+    // MAVLink v2フィールド
+    if (payload.length >= 10) {
+      result.progress = payload[3];
+      result.resultParam2 = this.getInt32(payload, 4);
+      result.targetSystem = payload[8];
+      result.targetComponent = payload[9];
+    }
+    
+    return result;
+  }
+
+  // AUTOPILOT_VERSION メッセージをパース
+  parseAutopilotVersion(payload: Uint8Array): ParsedAutopilotVersion | null {
+    if (payload.length < 60) return null;
+    
+    const flightCustomVersion: number[] = [];
+    const middlewareCustomVersion: number[] = [];
+    const osCustomVersion: number[] = [];
+    
+    // カスタムバージョン配列を読み取り
+    for (let i = 0; i < 8; i++) {
+      flightCustomVersion.push(payload[12 + i]);
+      middlewareCustomVersion.push(payload[20 + i]);
+      osCustomVersion.push(payload[28 + i]);
+    }
+    
+    return {
+      capabilities: this.getUint64(payload, 0),
+      flightSwVersion: this.getUint32(payload, 8),
+      middlewareSwVersion: this.getUint32(payload, 36),
+      osSwVersion: this.getUint32(payload, 40),
+      boardVersion: this.getUint32(payload, 44),
+      flightCustomVersion,
+      middlewareCustomVersion,
+      osCustomVersion,
+      vendorId: this.getUint16(payload, 48),
+      productId: this.getUint16(payload, 50),
+      uid: this.getUint64(payload, 52),
+    };
+  }
+
+  // TIMESYNC メッセージをパース
+  parseTimesync(payload: Uint8Array): ParsedTimesync | null {
+    if (payload.length < 16) return null;
+    return {
+      tc1: this.getInt64(payload, 0),
+      ts1: this.getInt64(payload, 8),
+    };
+  }
+
   // 汎用的なペイロードダンプ関数
   dumpPayload(msgId: number, payload: Uint8Array): { [key: string]: any } {
     const dump: { [key: string]: any } = {
@@ -850,6 +967,11 @@ export class MAVLinkParser {
   private getUint64(buffer: Uint8Array, offset: number): number {
     // JavaScriptの数値制限のため、下位32ビットのみ返す
     return this.getUint32(buffer, offset);
+  }
+
+  private getInt64(buffer: Uint8Array, offset: number): number {
+    // JavaScriptの数値制限のため、下位32ビットのみ返す（符号付き）
+    return this.getInt32(buffer, offset);
   }
 
   private getFloat32(buffer: Uint8Array, offset: number): number {

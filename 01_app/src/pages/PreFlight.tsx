@@ -11,17 +11,18 @@ import {
   DialogActions,
   TextField,
   List,
-  ListItem,
   ListItemText,
   ListItemButton,
   CircularProgress,
   Alert,
   Snackbar
 } from '@mui/material';
-import { Settings, CloudUpload, CloudDownload, UploadFile } from '@mui/icons-material';
+import { Settings, CloudUpload, CloudDownload, UploadFile, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { MapCard } from '../components/MapCard';
+import { PlansSidebar } from '../components/PlansSidebar';
 import { useFlightPlan } from '../contexts/FlightPlanContext';
 import { useFlightPlanStorage } from '../hooks/useFlightPlanStorage';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const MainContainer = styled(Box)({
   flex: 1,
@@ -56,9 +57,46 @@ const ContentSection = styled(Box, {
 
 export const PreFlight: React.FC = () => {
   const [configMode, setConfigMode] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined);
   const { selectedPlan, updateFlightPlan } = useFlightPlan();
   const { plans, loading, error, savePlan, loadPlans, loadPlan } = useFlightPlanStorage();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // 画面サイズに基づいてMapCardの初期サイズを計算
+  const calculateInitialMapSize = () => {
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    
+    // 画面サイズに応じて適切なサイズを計算
+    let widthRatio = 0.5;
+    let heightRatio = 0.6;
+    
+    if (screenWidth <= 768) { // モバイル
+      widthRatio = 0.85;
+      heightRatio = 0.7;
+    } else if (screenWidth <= 1024) { // タブレット
+      widthRatio = 0.65;
+      heightRatio = 0.65;
+    } else if (screenWidth <= 1440) { // 小さめのデスクトップ
+      widthRatio = 0.55;
+      heightRatio = 0.6;
+    }
+    
+    // グリッドにスナップして返す
+    const snapToGrid = (value: number, gridSize: number = 20) => {
+      return Math.round(value / gridSize) * gridSize;
+    };
+    
+    return {
+      width: snapToGrid(Math.min(screenWidth * widthRatio, 1200)), // 最大幅1200px
+      height: snapToGrid(Math.min(screenHeight * heightRatio, 800)) // 最大高さ800px
+    };
+  };
+  
+  // MapCardの位置とサイズをLocalStorageに保持
+  const [mapPosition, setMapPosition] = useLocalStorage('preflight_map_position', { x: 40, y: 40 });
+  const [mapSize, setMapSize] = useLocalStorage('preflight_map_size', calculateInitialMapSize());
   
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
@@ -70,6 +108,34 @@ export const PreFlight: React.FC = () => {
     severity: 'success' 
   });
 
+  // プラン選択ハンドラー
+  const handlePlanSelect = async (planId: string) => {
+    setSelectedPlanId(planId);
+    try {
+      const planData = await loadPlan(planId);
+      if (planData && planData.planData) {
+        updateFlightPlan(planData.planData);
+        setSnackbar({
+          open: true,
+          message: 'Plan loaded successfully',
+          severity: 'success'
+        });
+      }
+    } catch (error) {
+      console.error('Error loading plan:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to load plan',
+        severity: 'error'
+      });
+    }
+  };
+
+  // アップロードボタンクリックハンドラー
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
   // ローカルファイルから.planファイルを読み込む
   const handleLocalFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -79,7 +145,7 @@ export const PreFlight: React.FC = () => {
     if (!file.name.endsWith('.plan')) {
       setSnackbar({ 
         open: true, 
-        message: '.planファイルを選択してください', 
+        message: 'Please select a .plan file', 
         severity: 'error' 
       });
       return;
@@ -93,25 +159,25 @@ export const PreFlight: React.FC = () => {
 
         // 基本的な検証
         if (!planData.fileType || planData.fileType !== 'Plan') {
-          throw new Error('無効なフライトプランファイルです');
+          throw new Error('Invalid flight plan file');
         }
 
         if (!planData.mission || !planData.mission.items) {
-          throw new Error('ミッションデータが見つかりません');
+          throw new Error('Mission data not found');
         }
 
         // FlightPlanContextに設定
         updateFlightPlan(planData);
         setSnackbar({ 
           open: true, 
-          message: `${file.name}を読み込みました`, 
+          message: `Loaded ${file.name}`, 
           severity: 'success' 
         });
       } catch (error) {
         console.error('Error parsing flight plan:', error);
         setSnackbar({ 
           open: true, 
-          message: 'ファイルの読み込みに失敗しました', 
+          message: 'Failed to load file', 
           severity: 'error' 
         });
       }
@@ -120,7 +186,7 @@ export const PreFlight: React.FC = () => {
     reader.onerror = () => {
       setSnackbar({ 
         open: true, 
-        message: 'ファイルの読み込みに失敗しました', 
+        message: 'Failed to read file', 
         severity: 'error' 
       });
     };
@@ -133,69 +199,168 @@ export const PreFlight: React.FC = () => {
     }
   };
 
-  return (
-    <MainContainer>
-      {/* Header */}
-      <HeaderSection>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <Typography sx={{ fontSize: '15px', fontWeight: 600, color: 'white' }}>
-            Pre-Flight Planning
-          </Typography>
-          <Typography sx={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.8)' }}>
-            Weather & Route Analysis
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <Button 
-            size="small" 
-            sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}
-            startIcon={<UploadFile sx={{ fontSize: 14 }} />}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Load Local Plan
-          </Button>
-          <Button 
-            size="small" 
-            sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}
-            startIcon={<CloudDownload sx={{ fontSize: 14 }} />}
-            onClick={() => {
-              loadPlans();
-              setLoadDialogOpen(true);
-            }}
-          >
-            Load Cloud Plan
-          </Button>
-          <Button 
-            size="small" 
-            sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}
-            startIcon={<CloudUpload sx={{ fontSize: 14 }} />}
-            onClick={() => setSaveDialogOpen(true)}
-            disabled={!selectedPlan}
-          >
-            Save Plan
-          </Button>
-          <IconButton 
-            size="small" 
-            onClick={() => setConfigMode(!configMode)}
-            sx={{ 
-              color: configMode ? '#61dafb' : 'white',
-              '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
-            }}
-          >
-            <Settings fontSize="small" />
-          </IconButton>
-        </Box>
-      </HeaderSection>
+  // ウィンドウリサイズ時のMapCardサイズ調整
+  useEffect(() => {
+    const handleWindowResize = () => {
+      // MapCardのサイズを画面サイズに応じて自動調整
+      if (!configMode) { // 設定モードでない場合のみ
+        const newMapSize = calculateInitialMapSize();
+        setMapSize(prev => {
+          // アスペクト比を維持しつつサイズを調整
+          const aspectRatio = prev.width / prev.height;
+          const newWidth = newMapSize.width;
+          const newHeight = Math.round(newWidth / aspectRatio);
+          
+          // グリッドにスナップ
+          const snapToGrid = (value: number, gridSize: number = 20) => {
+            return Math.round(value / gridSize) * gridSize;
+          };
+          
+          return {
+            width: snapToGrid(newWidth),
+            height: snapToGrid(Math.min(newHeight, window.innerHeight * 0.8))
+          };
+        });
+      }
+    };
+    
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [configMode]);
 
-      {/* Content with Grid Background */}
-      <ContentSection configMode={configMode}>
-        <MapCard 
-          initialPosition={{ x: 40, y: 40 }} 
-          configMode={configMode} 
-          mapStyle="mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0"
-          flightPlan={selectedPlan}
+  return (
+    <Box sx={{ flex: 1, display: 'flex', backgroundColor: '#32495f', position: 'relative' }}>
+      {/* Sidebar */}
+      <Box
+        sx={{
+          width: isSidebarOpen ? 280 : 0,
+          transition: 'width 0.3s ease',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        <PlansSidebar 
+          selectedPlanId={selectedPlanId}
+          onPlanSelect={handlePlanSelect}
+          onUploadClick={handleUploadClick}
         />
-      </ContentSection>
+      </Box>
+      
+      {/* Toggle Button */}
+      <IconButton
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        sx={{
+          position: 'absolute',
+          left: isSidebarOpen ? 280 : 0,
+          top: '15%',
+          transform: 'translateY(-50%)',
+          backgroundColor: '#32495f',
+          color: 'white',
+          borderRadius: '0 4px 4px 0',
+          width: '20px',
+          height: '48px',
+          padding: 0,
+          zIndex: 1000,
+          transition: 'left 0.3s ease',
+          border: 'none',
+          '&:hover': {
+            backgroundColor: '#3d5673',
+          },
+        }}
+      >
+        {isSidebarOpen ? <ChevronLeft sx={{ fontSize: '20px' }} /> : <ChevronRight sx={{ fontSize: '20px' }} />}
+      </IconButton>
+      
+      {/* Main Content */}
+      <MainContainer>
+        {/* Header */}
+        <HeaderSection>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Typography sx={{ fontSize: '15px', fontWeight: 600, color: 'white' }}>
+              Pre-Flight Planning
+            </Typography>
+            <Typography sx={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.8)' }}>
+              Weather & Route Analysis
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Button 
+              size="small" 
+              sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}
+              startIcon={<UploadFile sx={{ fontSize: 14 }} />}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Load Local Plan
+            </Button>
+            <Button 
+              size="small" 
+              sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}
+              startIcon={<CloudDownload sx={{ fontSize: 14 }} />}
+              onClick={() => {
+                loadPlans();
+                setLoadDialogOpen(true);
+              }}
+            >
+              Load Cloud Plan
+            </Button>
+            <Button 
+              size="small" 
+              sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}
+              startIcon={<CloudUpload sx={{ fontSize: 14 }} />}
+              onClick={() => setSaveDialogOpen(true)}
+              disabled={!selectedPlan}
+            >
+              Save Plan
+            </Button>
+            <IconButton 
+              size="small" 
+              onClick={() => setConfigMode(!configMode)}
+              sx={{ 
+                color: configMode ? '#61dafb' : 'white',
+                '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+              }}
+            >
+              <Settings fontSize="small" />
+            </IconButton>
+          </Box>
+        </HeaderSection>
+
+        {/* Content with Grid Background */}
+        <ContentSection configMode={configMode}>
+          {configMode ? (
+            <MapCard 
+              initialPosition={mapPosition} 
+              configMode={configMode} 
+              mapStyle="mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0"
+              flightPlan={selectedPlan}
+              size={mapSize}
+              onPositionChange={setMapPosition}
+              onSizeChange={setMapSize}
+              pageId="preflight"
+            />
+          ) : (
+            <Box sx={{
+              position: 'absolute',
+              left: mapPosition.x,
+              top: mapPosition.y,
+              width: mapSize.width,
+              height: mapSize.height,
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
+              borderRadius: 2,
+              overflow: 'hidden',
+            }}>
+              <MapCard 
+                initialPosition={mapPosition} 
+                configMode={configMode} 
+                mapStyle="mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0"
+                flightPlan={selectedPlan}
+                size={mapSize}
+                pageId="preflight"
+              />
+            </Box>
+          )}
+        </ContentSection>
+      </MainContainer>
 
       {/* Save Plan Dialog */}
       <Dialog open={saveDialogOpen} onClose={() => setSaveDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -228,7 +393,7 @@ export const PreFlight: React.FC = () => {
             onClick={async () => {
               if (!planName || !selectedPlan) return;
               try {
-                await savePlan(selectedPlan, planName, planDescription);
+                await savePlan(planName, selectedPlan, { description: planDescription });
                 setSnackbar({ open: true, message: 'Flight plan saved successfully!', severity: 'success' });
                 setSaveDialogOpen(false);
                 setPlanName('');
@@ -321,6 +486,6 @@ export const PreFlight: React.FC = () => {
         style={{ display: 'none' }}
         onChange={handleLocalFileUpload}
       />
-    </MainContainer>
+    </Box>
   );
 };
