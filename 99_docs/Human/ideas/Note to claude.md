@@ -55,6 +55,12 @@
 	- [ ] 日付フィルタは削除
 	- [ ] DynamoDBの.planを表示　アップロード日時
 
+### Pre-Flight
+- [x] 天気予報テーブルをOverviewセクションに追加（2025-07-07）
+	- [x] Windy Point Forecast API統合
+	- [x] 離陸・着陸地点の気象データ表示
+	- [x] 気温、風速・風向、湿度、視程、気圧、雲量の表示
+	- [x] UASポートコード表示（UWAK/URSI等）
 
 ### Flights
 - [x] サブサイドバーを実装（検索バー、FLIGHTSヘッダー、Add Newボタン、日付グルーピング、フライト項目）
