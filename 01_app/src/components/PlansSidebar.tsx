@@ -25,6 +25,7 @@ import {
   Download,
   MoreVert,
   Delete,
+  Refresh,
 } from '@mui/icons-material';
 import { useFlightPlanStorage } from '../hooks/useFlightPlanStorage';
 import { SlideToConfirm } from './SlideToConfirm';
@@ -266,12 +267,26 @@ export const PlansSidebar: React.FC<PlansSidebarProps> = ({
         {/* Header Section */}
         <HeaderSection>
           <HeaderTitle>PLANS</HeaderTitle>
-          <UploadButton 
-            startIcon={<CloudUpload sx={{ fontSize: 16 }} />}
-            onClick={onUploadClick}
-          >
-            Upload Plan
-          </UploadButton>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <IconButton 
+              size="small" 
+              onClick={loadPlans}
+              sx={{ 
+                color: 'white',
+                padding: '4px',
+                '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+              }}
+              disabled={loading}
+            >
+              <Refresh sx={{ fontSize: 18 }} />
+            </IconButton>
+            <UploadButton 
+              startIcon={<CloudUpload sx={{ fontSize: 16 }} />}
+              onClick={onUploadClick}
+            >
+              Upload Plan
+            </UploadButton>
+          </Box>
         </HeaderSection>
       </Box>
 
@@ -302,7 +317,9 @@ export const PlansSidebar: React.FC<PlansSidebarProps> = ({
               >
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <PlanName selected={selectedPlanId === plan.id}>
-                    {plan.name}
+                    {plan.departure_code && plan.destination_code 
+                      ? `${plan.departure_code} - ${plan.destination_code}`
+                      : plan.name}
                   </PlanName>
                   {plan.description && (
                     <PlanDetails selected={selectedPlanId === plan.id}>

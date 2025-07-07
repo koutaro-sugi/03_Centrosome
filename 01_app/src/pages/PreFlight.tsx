@@ -10,16 +10,15 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  List,
-  ListItemText,
-  ListItemButton,
   CircularProgress,
   Alert,
   Snackbar
 } from '@mui/material';
-import { Settings, CloudUpload, CloudDownload, UploadFile, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Settings, CloudUpload, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { MapCard } from '../components/MapCard';
-import { PlansSidebar } from '../components/PlansSidebar';
+import { PreFlightSidebar } from '../components/PreFlightSidebar';
+import { ForecastPanel } from '../components/ForecastPanel';
+import { PlanDetailsWithForecast } from '../components/PlanDetailsWithForecast';
 import { useFlightPlan } from '../contexts/FlightPlanContext';
 import { useFlightPlanStorage } from '../hooks/useFlightPlanStorage';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -60,8 +59,7 @@ export const PreFlight: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined);
   const { selectedPlan, updateFlightPlan } = useFlightPlan();
-  const { plans, loading, error, savePlan, loadPlans, loadPlan } = useFlightPlanStorage();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { loading, savePlan, loadPlan } = useFlightPlanStorage();
   
   // 画面サイズに基づいてMapCardの初期サイズを計算
   const calculateInitialMapSize = () => {
@@ -98,8 +96,14 @@ export const PreFlight: React.FC = () => {
   const [mapPosition, setMapPosition] = useLocalStorage('preflight_map_position', { x: 40, y: 40 });
   const [mapSize, setMapSize] = useLocalStorage('preflight_map_size', calculateInitialMapSize());
   
+  // ForecastPanelの位置とサイズをLocalStorageに保持
+  const [forecastPosition, setForecastPosition] = useLocalStorage('preflight_forecast_position', { x: 600, y: 40 });
+  const [forecastSize, setForecastSize] = useLocalStorage('preflight_forecast_size', { width: 400, height: 600 });
+  
+  // PlanDetailsコンポーネントの表示状態をLocalStorageに保持 (デフォルトをtrueに変更)
+  const [showPlanDetails, setShowPlanDetails] = useLocalStorage('preflight_show_plan_details', true);
+  
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [loadDialogOpen, setLoadDialogOpen] = useState(false);
   const [planName, setPlanName] = useState('');
   const [planDescription, setPlanDescription] = useState('');
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ 
@@ -131,73 +135,7 @@ export const PreFlight: React.FC = () => {
     }
   };
 
-  // アップロードボタンクリックハンドラー
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
 
-  // ローカルファイルから.planファイルを読み込む
-  const handleLocalFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // ファイル拡張子の確認
-    if (!file.name.endsWith('.plan')) {
-      setSnackbar({ 
-        open: true, 
-        message: 'Please select a .plan file', 
-        severity: 'error' 
-      });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const content = e.target?.result as string;
-        const planData = JSON.parse(content);
-
-        // 基本的な検証
-        if (!planData.fileType || planData.fileType !== 'Plan') {
-          throw new Error('Invalid flight plan file');
-        }
-
-        if (!planData.mission || !planData.mission.items) {
-          throw new Error('Mission data not found');
-        }
-
-        // FlightPlanContextに設定
-        updateFlightPlan(planData);
-        setSnackbar({ 
-          open: true, 
-          message: `Loaded ${file.name}`, 
-          severity: 'success' 
-        });
-      } catch (error) {
-        console.error('Error parsing flight plan:', error);
-        setSnackbar({ 
-          open: true, 
-          message: 'Failed to load file', 
-          severity: 'error' 
-        });
-      }
-    };
-
-    reader.onerror = () => {
-      setSnackbar({ 
-        open: true, 
-        message: 'Failed to read file', 
-        severity: 'error' 
-      });
-    };
-
-    reader.readAsText(file);
-    
-    // ファイル入力をリセット（同じファイルを再度選択できるように）
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
 
   // ウィンドウリサイズ時のMapCardサイズ調整
   useEffect(() => {
@@ -239,10 +177,9 @@ export const PreFlight: React.FC = () => {
           position: 'relative',
         }}
       >
-        <PlansSidebar 
+        <PreFlightSidebar 
           selectedPlanId={selectedPlanId}
           onPlanSelect={handlePlanSelect}
-          onUploadClick={handleUploadClick}
         />
       </Box>
       
@@ -287,25 +224,6 @@ export const PreFlight: React.FC = () => {
             <Button 
               size="small" 
               sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}
-              startIcon={<UploadFile sx={{ fontSize: 14 }} />}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Load Local Plan
-            </Button>
-            <Button 
-              size="small" 
-              sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}
-              startIcon={<CloudDownload sx={{ fontSize: 14 }} />}
-              onClick={() => {
-                loadPlans();
-                setLoadDialogOpen(true);
-              }}
-            >
-              Load Cloud Plan
-            </Button>
-            <Button 
-              size="small" 
-              sx={{ color: 'white', fontSize: '10px', minHeight: '22px', textTransform: 'none' }}
               startIcon={<CloudUpload sx={{ fontSize: 14 }} />}
               onClick={() => setSaveDialogOpen(true)}
               disabled={!selectedPlan}
@@ -319,6 +237,7 @@ export const PreFlight: React.FC = () => {
                 color: configMode ? '#61dafb' : 'white',
                 '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
               }}
+              disabled={showPlanDetails}
             >
               <Settings fontSize="small" />
             </IconButton>
@@ -327,37 +246,71 @@ export const PreFlight: React.FC = () => {
 
         {/* Content with Grid Background */}
         <ContentSection configMode={configMode}>
-          {configMode ? (
-            <MapCard 
-              initialPosition={mapPosition} 
-              configMode={configMode} 
-              mapStyle="mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0"
-              flightPlan={selectedPlan}
-              size={mapSize}
-              onPositionChange={setMapPosition}
-              onSizeChange={setMapSize}
-              pageId="preflight"
-            />
+          {showPlanDetails ? (
+            // PlanDetailsレイアウト（拡張版） - デフォルト表示
+            <PlanDetailsWithForecast selectedPlanId={selectedPlanId} flightPlan={selectedPlan} />
           ) : (
-            <Box sx={{
-              position: 'absolute',
-              left: mapPosition.x,
-              top: mapPosition.y,
-              width: mapSize.width,
-              height: mapSize.height,
-              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
-              borderRadius: 2,
-              overflow: 'hidden',
-            }}>
-              <MapCard 
-                initialPosition={mapPosition} 
-                configMode={configMode} 
-                mapStyle="mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0"
-                flightPlan={selectedPlan}
-                size={mapSize}
-                pageId="preflight"
-              />
-            </Box>
+            // 通常のPre-Flightレイアウト（現在は使用されない）
+            configMode ? (
+              <>
+                <MapCard 
+                  initialPosition={mapPosition} 
+                  configMode={configMode} 
+                  mapStyle="mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0"
+                  flightPlan={selectedPlan}
+                  size={mapSize}
+                  onPositionChange={setMapPosition}
+                  onSizeChange={setMapSize}
+                  pageId="preflight"
+                />
+                <ForecastPanel
+                  flightPlan={selectedPlan}
+                  initialPosition={forecastPosition}
+                  configMode={configMode}
+                  onPositionChange={setForecastPosition}
+                  size={forecastSize}
+                  onSizeChange={setForecastSize}
+                />
+              </>
+            ) : (
+              <>
+                <Box sx={{
+                  position: 'absolute',
+                  left: mapPosition.x,
+                  top: mapPosition.y,
+                  width: mapSize.width,
+                  height: mapSize.height,
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                }}>
+                  <MapCard 
+                    initialPosition={mapPosition} 
+                    configMode={configMode} 
+                    mapStyle="mapbox://styles/ksugi/cm9rvsjrm00b401sshlns89e0"
+                    flightPlan={selectedPlan}
+                    size={mapSize}
+                    pageId="preflight"
+                  />
+                </Box>
+                {selectedPlan && (
+                  <Box sx={{
+                    position: 'absolute',
+                    left: forecastPosition.x,
+                    top: forecastPosition.y,
+                    width: forecastSize.width,
+                    height: forecastSize.height,
+                  }}>
+                    <ForecastPanel
+                      flightPlan={selectedPlan}
+                      initialPosition={forecastPosition}
+                      configMode={configMode}
+                      size={forecastSize}
+                    />
+                  </Box>
+                )}
+              </>
+            )
           )}
         </ContentSection>
       </MainContainer>
@@ -410,58 +363,6 @@ export const PreFlight: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Load Plan Dialog */}
-      <Dialog open={loadDialogOpen} onClose={() => setLoadDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Load Flight Plan</DialogTitle>
-        <DialogContent>
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress />
-            </Box>
-          ) : error ? (
-            <Alert severity="error">{error}</Alert>
-          ) : plans.length === 0 ? (
-            <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-              No saved flight plans found
-            </Typography>
-          ) : (
-            <List>
-              {plans.map((plan) => (
-                <ListItemButton 
-                  key={plan.id}
-                  onClick={async () => {
-                    try {
-                      const loadedPlan = await loadPlan(plan.id);
-                      if (loadedPlan && loadedPlan.planData) {
-                        updateFlightPlan(loadedPlan.planData);
-                        setSnackbar({ open: true, message: 'Flight plan loaded successfully!', severity: 'success' });
-                        setLoadDialogOpen(false);
-                      }
-                    } catch (err) {
-                      setSnackbar({ open: true, message: 'Failed to load flight plan', severity: 'error' });
-                    }
-                  }}
-                >
-                  <ListItemText 
-                    primary={plan.name}
-                    secondary={
-                      <>
-                        {plan.description && <Typography variant="body2">{plan.description}</Typography>}
-                        <Typography variant="caption" color="text.secondary">
-                          Created: {new Date(plan.createdAt).toLocaleDateString()}
-                        </Typography>
-                      </>
-                    }
-                  />
-                </ListItemButton>
-              ))}
-            </List>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLoadDialogOpen(false)}>Cancel</Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Snackbar for notifications */}
       <Snackbar
@@ -478,14 +379,6 @@ export const PreFlight: React.FC = () => {
         </Alert>
       </Snackbar>
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".plan"
-        style={{ display: 'none' }}
-        onChange={handleLocalFileUpload}
-      />
     </Box>
   );
 };

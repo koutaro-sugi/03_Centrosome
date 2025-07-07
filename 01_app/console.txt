@@ -1,0 +1,169 @@
+
+﻿
+MapCard.tsx:12 Mapbox token exists: true
+dynamodb.ts:6 AWS Config: 
+{region: 'ap-northeast-1', accessKeyId: 'AKIA3NULON...', hasSecret: true}
+scheduler.development.js:14 [Violation] 'message' handler took 170ms
+MapCard.tsx:207 Initializing map with saved state: 
+{center: Array(2), zoom: 10.701050747077046, bearing: 0, pitch: 0}
+MapCard.tsx:549 FlightPlan useEffect triggered 
+{hasMap: true, hasFlightPlan: false}
+useMAVLinkWebSocket.ts:90 MAVLink WebSocket接続開始: ws://52.194.5.104:8080
+MapCard.tsx:207 Initializing map with saved state: 
+{center: Array(2), zoom: 10.701050747077046, bearing: 0, pitch: 0}
+MapCard.tsx:549 FlightPlan useEffect triggered 
+{hasMap: true, hasFlightPlan: false}
+useMAVLinkWebSocket.ts:90 MAVLink WebSocket接続開始: ws://52.194.5.104:8080
+useMAVLinkWebSocket.ts:98 MAVLink WebSocket接続成功
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+useMAVLinkWebSocket.ts:98 MAVLink WebSocket接続成功
+2
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+useMAVLinkWebSocket.ts:711 === 未処理メッセージのペイロードダンプ: ID 164 (SIMSTATE) ===
+useMAVLinkWebSocket.ts:712 
+{msgId: 164, payloadLength: 44, hex: '36 8d ea 38 2e 26 35 bd 08 a5 c5 3f 85 a8 e9 be 47…a 1e 68 96 bc 21 70 63 3c 18 76 81 13 6d 1f 55 4d', byte_0: 54, byte_1: 141, …}
+3
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+useMAVLinkWebSocket.ts:711 === 未処理メッセージのペイロードダンプ: ID 11031 (ARDUPILOT_PID_TUNING) ===
+useMAVLinkWebSocket.ts:712 
+{msgId: 11031, payloadLength: 44, hex: '8f 06 8f 06 8f 06 8f 06 50 00 50 00 50 00 50 00 01…0 00 00 00 00 30 77 30 77 30 77 30 77 20 20 20 20', byte_0: 143, byte_1: 6, …}
+10
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:337 [NAV] wp_dist: 00 f7 → 63232m (63.2km)
+3
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+useMAVLinkWebSocket.ts:711 === 未処理メッセージのペイロードダンプ: ID 65 (RC_CHANNELS_OVERRIDE) ===
+useMAVLinkWebSocket.ts:712 
+{msgId: 65, payloadLength: 42, hex: 'aa a3 3d 00 dc 05 dc 05 e8 03 dc 05 08 07 e8 03 e8…0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 08 ff', byte_0: 170, byte_1: 163, …}
+5
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+useMAVLinkWebSocket.ts:711 === 未処理メッセージのペイロードダンプ: ID 137 (UNKNOWN) ===
+useMAVLinkWebSocket.ts:712 
+{msgId: 137, payloadLength: 14, hex: 'aa a3 3d 00 07 df 78 44 00 00 00 00 4b 0d', byte_0: 170, byte_1: 163, …}
+2
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+useMAVLinkWebSocket.ts:711 === 未処理メッセージのペイロードダンプ: ID 87 (UNKNOWN) ===
+useMAVLinkWebSocket.ts:712 
+{msgId: 87, payloadLength: 50, hex: 'aa a3 3d 00 e3 7a 81 13 63 f4 55 4d 14 2e 15 43 00…0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 f8 fd', byte_0: 170, byte_1: 163, …}
+11
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+useMAVLinkWebSocket.ts:711 === 未処理メッセージのペイロードダンプ: ID 22 (PARAM_VALUE) ===
+useMAVLinkWebSocket.ts:712 
+{msgId: 22, payloadLength: 25, hex: '00 00 20 41 f7 05 ff ff 4d 41 56 31 5f 45 58 54 52 41 32 00 00 00 00 00 04', byte_0: 0, byte_1: 0, …}
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+hook.js:608 Couldn't find terrain source "mapbox-dem".
+hook.js:608 "featureNamespace place-A of featureset place-labels's selector is not associated to the same source, skip this selector
+MapCard.tsx:245 Style loaded event fired
+useMAVLinkWebSocket.ts:293 [STATUS] Mode: undefined, WP: #0, wp_dist: 63232m (最小:63232m, 最大:63232m, 平均:63232m)
+useMAVLinkWebSocket.ts:318 [MISSION] Waypoint changed: #0 → #11
+useMAVLinkWebSocket.ts:318 [MISSION] Waypoint changed: #0 → #11
+81
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+MapCard.tsx:335 Creating aircraft marker at: 32.7251489 129.7424614
+21
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+useMAVLinkWebSocket.ts:139 HEARTBEAT データ (sysid=1, compid=1): 
+{customMode: 10, type: 1, autopilot: 3, baseMode: 217, systemStatus: 4, …}
+useMAVLinkWebSocket.ts:140 HEARTBEAT ペイロードダンプ: 
+{msgId: 0, payloadLength: 9, hex: '0a 00 00 00 01 03 d9 04 03', byte_0: 10, byte_1: 0, …}
+useMAVLinkWebSocket.ts:141 Flight Mode 値: 10 → AUTO
+19
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 63232m → 17408m (差: -45824m)
+93
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+MapCard.tsx:230 Map loaded successfully
+MapCard.tsx:233 Loaded style name: Centra-Preflight
+MapCard.tsx:234 Loaded style sources: 
+['mapbox-dem']
+32
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 17408m → 23040m (差: 5632m)
+87
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+useMAVLinkWebSocket.ts:711 === 未処理メッセージのペイロードダンプ: ID 111 (TIMESYNC) ===
+useMAVLinkWebSocket.ts:712 
+{msgId: 111, payloadLength: 14, hex: '00 00 00 00 00 00 00 00 e9 31 05 db ac 03', byte_0: 0, byte_1: 0, …}
+44
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 23040m → 57712m (差: 34672m)
+125
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 57712m → 15424m (差: -42288m)
+136
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 15424m → 46640m (差: 31216m)
+119
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 46640m → 59696m (差: 13056m)
+135
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 59696m → 17024m (差: -42672m)
+118
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 17024m → 43088m (差: 26064m)
+136
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 43088m → 18816m (差: -24272m)
+118
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 18816m → 1088m (差: -17728m)
+128
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 1088m → 42496m (差: 41408m)
+mavlinkParser.ts:337 [NAV] wp_dist: 00 a6 → 42496m (42.5km)
+34
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+useMAVLinkWebSocket.ts:293 [STATUS] Mode: AUTO, WP: #11, wp_dist: 42496m (最小:1088m, 最大:63232m, 平均:33226m)
+93
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 42496m → 6144m (差: -36352m)
+127
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 6144m → 53216m (差: 47072m)
+127
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 53216m → 8448m (差: -44768m)
+128
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 8448m → 46912m (差: 38464m)
+126
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 46912m → 26496m (差: -20416m)
+128
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 26496m → 60800m (差: 34304m)
+125
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 60800m → 384m (差: -60416m)
+129
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 384m → 23680m (差: 23296m)
+589
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+in-flight:1 [.WebGL-0x10800a5f000] GL_INVALID_VALUE: glBindAttribLocation: Index must be less than MAX_VERTEX_ATTRIBS.
+in-flight:1 [.WebGL-0x10800a5f000] GL_INVALID_VALUE: glBindAttribLocation: Index must be less than MAX_VERTEX_ATTRIBS.
+in-flight:1 [.WebGL-0x10800a5f000] GL_INVALID_VALUE: glBindAttribLocation: Index must be less than MAX_VERTEX_ATTRIBS.
+in-flight:1 [.WebGL-0x10800a5f000] GL_INVALID_VALUE: glBindAttribLocation: Index must be less than MAX_VERTEX_ATTRIBS.
+2070
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 25344m → 32768m (差: 7424m)
+mavlinkParser.ts:337 [NAV] wp_dist: 00 80 → 32768m (32.8km)
+26
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+useMAVLinkWebSocket.ts:293 [STATUS] Mode: AUTO, WP: #11, wp_dist: 32768m (最小:384m, 最大:63232m, 平均:31307m)
+useMAVLinkWebSocket.ts:318 [MISSION] Waypoint changed: #11 → #12
+useMAVLinkWebSocket.ts:318 [MISSION] Waypoint changed: #11 → #12
+85
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 32768m → 40832m (差: 8064m)
+267
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 39488m → 60048m (差: 20560m)
+254
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 57984m → 33024m (差: -24960m)
+136
+useMAVLinkWebSocket.ts:120 MAVLink v2プロトコルを検出
+mavlinkParser.ts:330 [NAV] ⚠️ 大きな変化: 33024m → 40576m (差: 7552m)
+﻿

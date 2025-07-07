@@ -9,6 +9,7 @@ interface SimpleItem {
   command: number;
   frame: number;
   params: number[];
+  coordinate?: number[]; // [lat, lon]
 }
 
 interface Mission {

@@ -242,7 +242,7 @@ export class MAVLinkParser {
     // - climb: float (4 bytes) @ 16
     
     if (payload.length < 20) {
-      console.warn(`[VFR_HUD] ペイロードサイズが不正: ${payload.length}バイト (期待: 20バイト)`);
+      // console.warn(`[VFR_HUD] ペイロードサイズが不正: ${payload.length}バイト (期待: 20バイト)`);
       return null;
     }
     

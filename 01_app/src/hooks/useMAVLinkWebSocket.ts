@@ -224,7 +224,7 @@ export const useMAVLinkWebSocket = ({
                   verticalSpeed: hud.climb,     // Climb rate m/s
                 }));
               } else {
-                console.error('[VFR_HUD] パース失敗！');
+                // console.error('[VFR_HUD] パース失敗！');
               }
               break;
             }

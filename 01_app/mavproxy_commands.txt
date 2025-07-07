@@ -1,0 +1,38 @@
+# MAVProxyコマンド集
+
+## 1. ストリームレート設定確認と変更
+# 現在の設定を確認
+param show SR0_EXTRA1
+param show SR0_POSITION
+param show SR0_EXTRA2
+param show SR0_EXTRA3
+
+# ストリームレートを設定（Hz単位）
+param set SR0_EXTRA1 10
+param set SR0_POSITION 10
+param set SR0_EXTRA2 10
+param set SR0_EXTRA3 4
+param set SR0_EXT_STAT 2
+
+# 特定メッセージの個別設定（マイクロ秒単位）
+# NAV_CONTROLLER_OUTPUT (ID: 62) を20Hzに
+long SET_MESSAGE_INTERVAL 62 50000
+
+# ATTITUDE (ID: 30) を20Hzに
+long SET_MESSAGE_INTERVAL 30 50000
+
+# GLOBAL_POSITION_INT (ID: 33) を10Hzに
+long SET_MESSAGE_INTERVAL 33 100000
+
+## 2. デバッグ用コマンド
+# メッセージレート確認
+status
+
+# 特定メッセージの監視
+watch NAV_CONTROLLER_OUTPUT
+
+# パラメータ保存
+param save
+
+## 3. 接続確認
+link

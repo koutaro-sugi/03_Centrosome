@@ -28,11 +28,9 @@ export const useFlightPlanStorage = () => {
         status: 'draft',
         planData: plan, // 元のMissionPlanデータをそのまま保存
         overview: overview ? {
-          aircraft: overview.aircraft,
-          pilotInCommand: overview.pilotInCommand,
-          omcLocation: overview.omcLocation,
-          duration: overview.duration,
-          description: overview.description,
+          aircraft: overview.aircraft || 'DrN-40 (VTOL)',
+          duration: overview.duration || '',
+          description: overview.description || '',
         } : undefined,
       });
       

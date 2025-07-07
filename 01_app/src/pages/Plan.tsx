@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { PlanDetails } from '../components/PlanDetails';
 import { PlansSidebar } from '../components/PlansSidebar';
 import { useFlightPlanStorage } from '../hooks/useFlightPlanStorage';
+import { UASPortLookupService } from '../services/uasPortLookup';
 
 // ヘルパー関数：座標から地名を取得
 async function getPlaceName(lat: number, lon: number): Promise<string> {
@@ -95,8 +96,6 @@ function getLandingCoordinates(planData: any): { lat: number; lon: number } | nu
 
 interface PlanInfo {
   aircraft: string;
-  pilotInCommand: string;
-  omcLocation: string;
   duration: string;
   description: string;
 }
@@ -109,6 +108,7 @@ export const Plan: React.FC = () => {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { savePlan, loadPlans } = useFlightPlanStorage();
+  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -119,8 +119,6 @@ export const Plan: React.FC = () => {
   const [pendingPlanName, setPendingPlanName] = useState('');
   const [planInfo, setPlanInfo] = useState<PlanInfo>({
     aircraft: 'DrN-40 (VTOL)',
-    pilotInCommand: '',
-    omcLocation: '',
     duration: '',
     description: '',
   });
@@ -172,22 +170,44 @@ export const Plan: React.FC = () => {
           throw new Error('Could not extract takeoff/landing coordinates');
         }
 
-        // 地名を取得
-        const takeoffPlace = await getPlaceName(takeoffCoords.lat, takeoffCoords.lon);
-        const landingPlace = await getPlaceName(landingCoords.lat, landingCoords.lon);
+        // UASポートを検出
+        const { departurePort, destinationPort } = await UASPortLookupService.identifyPortsForFlight(
+          takeoffCoords,
+          landingCoords
+        );
 
-        // ファイル名を生成
-        const planName = `${takeoffPlace} - ${landingPlace}`;
+        let planName: string;
+        let departurePlaceName: string;
+        let destinationPlaceName: string;
+        
+        if (departurePort && destinationPort) {
+          // 両方がUASポート内の場合
+          planName = `${departurePort} - ${destinationPort}`;
+          // ポート名（地名）を取得
+          departurePlaceName = await UASPortLookupService.getPortName(departurePort);
+          destinationPlaceName = await UASPortLookupService.getPortName(destinationPort);
+        } else {
+          // UASポート外の場合は地名を取得
+          const takeoffPlace = departurePort || await getPlaceName(takeoffCoords.lat, takeoffCoords.lon);
+          const landingPlace = destinationPort || await getPlaceName(landingCoords.lat, landingCoords.lon);
+          planName = `${takeoffPlace} - ${landingPlace}`;
+          
+          // 地名を設定
+          departurePlaceName = departurePort 
+            ? await UASPortLookupService.getPortName(departurePort)
+            : await getPlaceName(takeoffCoords.lat, takeoffCoords.lon);
+          destinationPlaceName = destinationPort
+            ? await UASPortLookupService.getPortName(destinationPort)
+            : await getPlaceName(landingCoords.lat, landingCoords.lon);
+        }
 
         // ダイアログを開くためにデータを保存
         setPendingPlanData(planData);
         setPendingPlanName(planName);
         setPlanInfo({
           aircraft: 'DrN-40 (VTOL)',
-          pilotInCommand: '',
-          omcLocation: '',
           duration: '',
-          description: `Flight plan from ${takeoffPlace} to ${landingPlace}`,
+          description: `${departurePlaceName} - ${destinationPlaceName}`,
         });
         setUploadDialogOpen(true);
       } catch (error) {
@@ -233,6 +253,9 @@ export const Plan: React.FC = () => {
       // プラン一覧を更新
       await loadPlans();
       
+      // サイドバーを強制的にリフレッシュ
+      setSidebarRefreshKey(prev => prev + 1);
+      
       // アップロードしたプランを選択状態にする
       if (result && result.id) {
         setSelectedPlanId(result.id);
@@ -254,8 +277,6 @@ export const Plan: React.FC = () => {
     setPendingPlanName('');
     setPlanInfo({
       aircraft: 'DrN-40 (VTOL)',
-      pilotInCommand: '',
-      omcLocation: '',
       duration: '',
       description: '',
     });
@@ -272,6 +293,7 @@ export const Plan: React.FC = () => {
         }}
       >
         <PlansSidebar 
+          key={sidebarRefreshKey}
           selectedPlanId={selectedPlanId}
           onPlanSelect={handlePlanSelect}
           onUploadClick={handleUploadClick}
@@ -348,18 +370,6 @@ export const Plan: React.FC = () => {
                 label="Aircraft"
                 value={planInfo.aircraft}
                 onChange={(e) => setPlanInfo({ ...planInfo, aircraft: e.target.value })}
-              />
-              <TextField
-                fullWidth
-                label="Pilot in Command"
-                value={planInfo.pilotInCommand}
-                onChange={(e) => setPlanInfo({ ...planInfo, pilotInCommand: e.target.value })}
-              />
-              <TextField
-                fullWidth
-                label="OMC Location"
-                value={planInfo.omcLocation}
-                onChange={(e) => setPlanInfo({ ...planInfo, omcLocation: e.target.value })}
               />
               <TextField
                 fullWidth

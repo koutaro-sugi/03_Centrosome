@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Box, ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { Sidebar } from './components/Sidebar';
@@ -9,7 +9,9 @@ import { InFlight } from './pages/InFlight';
 import { Aircrafts } from './pages/Aircrafts';
 import { Logbook } from './pages/Logbook';
 import { TrackLogs } from './pages/TrackLogs';
+import { Admin } from './pages/Admin';
 import { FlightPlanProvider } from './contexts/FlightPlanContext';
+import { initializeApp } from './utils/initializeApp';
 
 const theme = createTheme({
   palette: {
@@ -68,6 +70,11 @@ const theme = createTheme({
 });
 
 function App() {
+  // アプリ起動時に初期化処理を実行
+  useEffect(() => {
+    initializeApp();
+  }, []);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -89,6 +96,7 @@ function App() {
             <Route path="/aircrafts" element={<Aircrafts />} />
             <Route path="/logbook" element={<Logbook />} />
             <Route path="/track-logs" element={<TrackLogs />} />
+            <Route path="/admin" element={<Admin />} />
           </Routes>
         </Box>
       </Router>

@@ -1,0 +1,11 @@
+45.4235319, 141.6352351
+
+sim_vehicle.py -v ArduPlane -f quadplane --console \
+                            --custom-location=45.42353190,141.63523510,0,0 \
+                            --out=udp:52.194.5.104:14555
+
+sim_vehicle.py -v ArduPlane -f quadplane --console \
+                            --custom-location=32.69812836,128.85303156,0,0 \
+                            --out=udp:52.194.5.104:14555
+
+                            

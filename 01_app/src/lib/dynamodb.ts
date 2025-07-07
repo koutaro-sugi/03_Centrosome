@@ -20,7 +20,11 @@ const client = new DynamoDBClient({
 });
 
 // DocumentClientでJSONを直接扱えるように
-export const dynamodb = DynamoDBDocumentClient.from(client);
+export const dynamodb = DynamoDBDocumentClient.from(client, {
+  marshallOptions: {
+    removeUndefinedValues: true, // undefined値を自動的に削除
+  },
+});
 
 // テーブル名
 export const TABLE_NAME = process.env.REACT_APP_DYNAMODB_TABLE || 'CentrosomeData';
@@ -41,6 +45,8 @@ export interface FlightPlan {
   name: string;
   description?: string;
   aircraft?: string;
+  departure_code?: string; // 出発地のUASポートコード
+  destination_code?: string; // 目的地のUASポートコード
   waypoints: any[]; // MissionPlannerの形式に従う
   createdAt: string;
   updatedAt: string;
@@ -48,8 +54,6 @@ export interface FlightPlan {
   planData: any; // 元の.planファイルの内容
   overview?: {
     aircraft: string;
-    pilotInCommand: string;
-    omcLocation: string;
     duration: string;
     description: string;
   };

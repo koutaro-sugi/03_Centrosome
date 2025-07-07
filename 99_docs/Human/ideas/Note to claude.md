@@ -37,7 +37,7 @@
 ## タイポグラフィー
 ### 共通事項
 - [ ] 左右上下方向のアラインは　**左中央揃え**　にすること
-- [ ] 見出しに折り返しは使わないこと。治らないなら枠を広げる。
+- [ ] 見出しに折り返しは使わないこと。収まらないなら枠を広げる。
 
 ## その他
 - [x] Centrosome横のアイコンは'@mui/icons-material/Hub'で。
@@ -71,10 +71,25 @@
 ## 新規追加タスク（2025-01-05）
 ### 全体UI
 - [ ] UIを英語化（日本語→英語）
-- [ ] プランファイル名をFUKUE - NAGASAKI形式に変更
+- [x] プランファイル名をFUKUE - NAGASAKI形式に変更
 
 ### Planページ
-- [ ] 新規Planページの作成
-- [ ] サイドバーにPlanメニューを追加
-- [ ] Mapbox Geocoding APIを使った逆ジオコーディング機能（英語・大文字）
-- [ ] プラン一覧表示機能（Upload Date付き）
+- [x] 新規Planページの作成
+- [x] サイドバーにPlanメニューを追加
+- [x] Mapbox Geocoding APIを使った逆ジオコーディング機能（英語・大文字）
+- [x] プラン一覧表示機能（Upload Date付き）
+
+## 実装済み機能（2025-07-06更新）
+### DynamoDB連携
+- [x] DynamoDBクライアント設定（dynamodb.ts）
+- [x] フライトプランのCRUD操作実装
+- [x] useFlightPlanStorageフック実装
+
+### Mapbox連携
+- [x] Geocoding API統合（Plan.tsx）
+- [x] 座標から地名を取得する逆ジオコーディング
+- [x] 英語・大文字での地名取得
+
+### ファイル管理
+- [x] プランファイルの自動命名（TAKEOFF - LANDING形式）
+- [x] アップロード日時の記録とDynamoDB保存
