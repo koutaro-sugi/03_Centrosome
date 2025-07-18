@@ -1,4 +1,4 @@
-import { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, DeleteCommand, GetCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, QueryCommand, UpdateCommand, DeleteCommand, GetCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamodb, TABLE_NAME } from './dynamodb';
 import { UASPort, CreateUASPortInput, UpdateUASPortInput } from '../types/uasport';
 

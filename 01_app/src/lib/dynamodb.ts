@@ -36,6 +36,9 @@ export enum EntityType {
   PLAN = 'PLAN',
   FLIGHT = 'FLIGHT',
   TELEMETRY = 'TELEMETRY',
+  FLIGHTLOG = 'FLIGHTLOG',
+  LOCATION = 'LOCATION',
+  PILOT = 'PILOT',
 }
 
 // 型定義

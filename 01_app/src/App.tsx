@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Box, ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Box, ThemeProvider, createTheme, CssBaseline, useMediaQuery } from '@mui/material';
+// import { Amplify } from 'aws-amplify';
+// import { AuthWrapper } from './components/AuthWrapper';
 import { Sidebar } from './components/Sidebar';
 import { Flights } from './pages/Flights';
 import { Plan } from './pages/Plan';
@@ -10,8 +12,12 @@ import { Aircrafts } from './pages/Aircrafts';
 import { Logbook } from './pages/Logbook';
 import { TrackLogs } from './pages/TrackLogs';
 import { Admin } from './pages/Admin';
+import { TestDataSetup } from './pages/TestDataSetup';
 import { FlightPlanProvider } from './contexts/FlightPlanContext';
 import { initializeApp } from './utils/initializeApp';
+// import amplifyconfig from './amplifyconfiguration';
+
+// Amplify.configure(amplifyconfig);
 
 const theme = createTheme({
   palette: {
@@ -69,6 +75,39 @@ const theme = createTheme({
   },
 });
 
+// レイアウトコンポーネント
+function AppLayout() {
+  const location = useLocation();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 960px未満をモバイルとする
+  const isLogbookPage = location.pathname === '/logbook';
+  const shouldHideSidebar = isMobile && isLogbookPage;
+
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      height: '100vh',
+      width: '100%',
+      overflow: 'hidden'
+    }}>
+      {!shouldHideSidebar && <Sidebar />}
+      <Box sx={{ flex: 1, width: '100%' }}>
+        <Routes>
+        <Route path="/" element={<Navigate to="/flights" replace />} />
+        <Route path="/flights" element={<Flights />} />
+        <Route path="/plan" element={<Plan />} />
+        <Route path="/pre-flight" element={<PreFlight />} />
+        <Route path="/in-flight" element={<InFlight />} />
+        <Route path="/aircrafts" element={<Aircrafts />} />
+        <Route path="/logbook" element={<Logbook />} />
+        <Route path="/track-logs" element={<TrackLogs />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/test-data" element={<TestDataSetup />} />
+      </Routes>
+      </Box>
+    </Box>
+  );
+}
+
 function App() {
   // アプリ起動時に初期化処理を実行
   useEffect(() => {
@@ -78,29 +117,14 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <FlightPlanProvider>
-        <Router>
-        <Box sx={{ 
-          display: 'flex', 
-          height: '100vh',
-          width: '100%',
-          overflow: 'hidden'
-        }}>
-          <Sidebar />
-          <Routes>
-            <Route path="/" element={<Navigate to="/flights" replace />} />
-            <Route path="/flights" element={<Flights />} />
-            <Route path="/plan" element={<Plan />} />
-            <Route path="/pre-flight" element={<PreFlight />} />
-            <Route path="/in-flight" element={<InFlight />} />
-            <Route path="/aircrafts" element={<Aircrafts />} />
-            <Route path="/logbook" element={<Logbook />} />
-            <Route path="/track-logs" element={<TrackLogs />} />
-            <Route path="/admin" element={<Admin />} />
-          </Routes>
-        </Box>
-      </Router>
-      </FlightPlanProvider>
+      {/* Amplify Authを有効にする場合は下記のコメントを解除 */}
+      {/* <AuthWrapper> */}
+        <FlightPlanProvider>
+          <Router>
+            <AppLayout />
+          </Router>
+        </FlightPlanProvider>
+      {/* </AuthWrapper> */}
     </ThemeProvider>
   );
 }

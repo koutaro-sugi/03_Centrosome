@@ -7,9 +7,7 @@ import {
   Typography,
   List,
   ListItem,
-  ListItemText,
   styled,
-  IconButton,
   Collapse,
 } from '@mui/material';
 import {

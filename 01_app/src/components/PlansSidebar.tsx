@@ -20,7 +20,6 @@ import {
 } from '@mui/material';
 import {
   Search,
-  Add,
   CloudUpload,
   Download,
   MoreVert,

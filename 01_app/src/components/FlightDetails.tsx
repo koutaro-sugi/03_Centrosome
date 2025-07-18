@@ -4,14 +4,11 @@ import {
   Typography,
   Card,
   CardContent,
-  Chip,
   Button,
   styled,
   TextField,
-  Tabs,
-  Tab,
 } from '@mui/material';
-import { UploadFile, Map as MapIcon } from '@mui/icons-material';
+import { UploadFile } from '@mui/icons-material';
 import { useFlightPlan } from '../contexts/FlightPlanContext';
 
 const MainContainer = styled(Box)({

@@ -6,7 +6,6 @@ import {
   CardContent,
   styled,
   TextField,
-  Divider,
   CircularProgress,
   Table,
   TableBody,
@@ -14,17 +13,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
 } from '@mui/material';
 import {
   FlightTakeoff,
   FlightLand,
-  Air,
-  Thermostat,
-  WaterDrop,
-  Visibility,
-  Speed,
-  Cloud,
 } from '@mui/icons-material';
 import { MapCard } from './MapCard';
 import { useFlightPlanStorage } from '../hooks/useFlightPlanStorage';

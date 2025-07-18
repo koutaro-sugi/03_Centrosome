@@ -13,7 +13,9 @@ const SliderContainer = styled(Box)({
   userSelect: 'none',
 });
 
-const SliderTrack = styled(Box)<{ progress: number }>(({ progress }) => ({
+const SliderTrack = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'progress',
+})<{ progress: number }>(({ progress }) => ({
   position: 'absolute',
   left: 0,
   top: 0,
@@ -23,7 +25,9 @@ const SliderTrack = styled(Box)<{ progress: number }>(({ progress }) => ({
   transition: 'none',
 }));
 
-const SliderThumb = styled(Box)<{ thumbPosition: number }>(({ thumbPosition }) => ({
+const SliderThumb = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'thumbPosition',
+})<{ thumbPosition: number }>(({ thumbPosition }) => ({
   position: 'absolute',
   left: `${thumbPosition}px`,
   top: '50%',
@@ -96,6 +100,7 @@ export const SlideToConfirm: React.FC<SlideToConfirmProps> = ({
       
       if (isAtEnd && !disabled) {
         // Confirm action
+        console.log('[SlideToConfirm] Slider reached end, calling onConfirm');
         onConfirm();
         // Reset position after confirmation
         setTimeout(() => {
@@ -103,6 +108,7 @@ export const SlideToConfirm: React.FC<SlideToConfirmProps> = ({
         }, 200);
       } else {
         // Reset position if not at the end
+        console.log('[SlideToConfirm] Slider not at end, resetting position');
         setPosition(4);
       }
     }

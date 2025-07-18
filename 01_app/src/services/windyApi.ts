@@ -244,24 +244,24 @@ export const fetchFlightWeather = async (
 };
 
 // Mapbox Geocoding APIから地名を取得（既存の実装を参考）
-async function getPlaceName(lat: number, lon: number, mapboxToken: string): Promise<string | null> {
-  try {
-    const response = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${lon},${lat}.json?access_token=${mapboxToken}`
-    );
-    const data = await response.json();
-    
-    if (data.features && data.features.length > 0) {
-      const place = data.features[0];
-      const name = place.place_name?.split(',')[0] || place.text;
-      return name?.toUpperCase() || null;
-    }
-    return null;
-  } catch (error) {
-    console.error('Geocoding error:', error);
-    return null;
-  }
-}
+// async function getPlaceName(lat: number, lon: number, mapboxToken: string): Promise<string | null> {
+//   try {
+//     const response = await fetch(
+//       `https://api.mapbox.com/geocoding/v5/mapbox.places/${lon},${lat}.json?access_token=${mapboxToken}`
+//     );
+//     const data = await response.json();
+//     
+//     if (data.features && data.features.length > 0) {
+//       const place = data.features[0];
+//       const name = place.place_name?.split(',')[0] || place.text;
+//       return name?.toUpperCase() || null;
+//     }
+//     return null;
+//   } catch (error) {
+//     console.error('Geocoding error:', error);
+//     return null;
+//   }
+// }
 
 // Map Forecast API helper function
 export const getWindyMapUrl = (config: MapForecastConfig): string => {
