@@ -3,7 +3,6 @@
 import {
   MAVLinkMessage,
   MAVLinkHeader,
-  MAVLinkMessageType,
   ParsedHeartbeat,
   ParsedAttitude,
   ParsedGlobalPositionInt,

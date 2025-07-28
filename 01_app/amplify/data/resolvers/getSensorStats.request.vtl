@@ -1,0 +1,49 @@
+## getSensorStats クエリ用リクエストリゾルバー
+## 指定された期間の統計データを取得
+
+#set($deviceId = $ctx.args.deviceId)
+#set($period = $ctx.args.period)
+#if(!$period)
+  #set($period = "HOUR")
+#end
+
+#set($pk = "DEVICE#${deviceId}")
+
+## 期間に応じて検索範囲を設定
+#set($now = $util.time.nowISO8601())
+#set($startTime = $util.time.parseISO8601($util.time.nowISO8601()))
+#set($startTime = $util.time.epochMilliSeconds($startTime))
+
+#if($period == "HOUR")
+  ## 1時間前から現在まで
+  #set($startTime = $startTime - 3600000)
+#else
+  ## 24時間前から現在まで
+  #set($startTime = $startTime - 86400000)
+#end
+
+#set($startTime = $util.time.epochMilliSecondsToISO8601($startTime))
+
+{
+  "version": "2018-05-29",
+  "operation": "Query",
+  "query": {
+    "expression": "PK = :pk AND SK BETWEEN :start AND :end",
+    "expressionValues": {
+      ":pk": $util.dynamodb.toDynamoDBJson($pk),
+      ":start": $util.dynamodb.toDynamoDBJson("${startTime}#STATS_10MIN"),
+      ":end": $util.dynamodb.toDynamoDBJson("${now}#STATS_10MIN")
+    }
+  },
+  "scanIndexForward": false,
+  "limit": 1,
+  "filter": {
+    "expression": "#dataType = :dataType",
+    "expressionNames": {
+      "#dataType": "dataType"
+    },
+    "expressionValues": {
+      ":dataType": $util.dynamodb.toDynamoDBJson("STATS_10MIN")
+    }
+  }
+}

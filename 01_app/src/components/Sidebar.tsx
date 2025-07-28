@@ -7,7 +7,9 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  styled
+  styled,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
   FlightTakeoff,
@@ -17,10 +19,15 @@ import {
   Timeline,
   Logout,
   Hub,
-  Description
+  Description,
+  Cloud,
+  Brightness4,
+  Brightness7
 } from '@mui/icons-material';
+import { useThemeMode } from '../App';
+import { LazyImage } from './LazyImage';
 
-const SidebarContainer = styled(Box)(({ theme }) => ({
+const SidebarContainer = styled(Box)(() => ({
   width: 165,
   height: '100vh',
   backgroundColor: '#1e374f',
@@ -87,6 +94,7 @@ const menuItems = [
   { name: 'Flights', icon: FlightTakeoff, path: '/flights' },
   { name: 'Pre-Flight', icon: WbSunny, path: '/pre-flight' },
   { name: 'In-Flight', icon: Hub, path: '/in-flight' },
+  { name: 'Weather', icon: Cloud, path: '/weather' },
   { name: 'Aircrafts', icon: Flight, path: '/aircrafts' },
   { name: 'Logbook', icon: MenuBook, path: '/logbook' },
   { name: 'Track Logs', icon: Timeline, path: '/track-logs' },
@@ -95,29 +103,47 @@ const menuItems = [
 export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toggleColorMode, mode } = useThemeMode();
 
   const handleNavigation = (path: string) => {
     navigate(path);
   };
 
-  const handleLogout = () => {
-    // ログアウト処理（後で実装）
-    console.log('Logout clicked');
+  const handleLogout = async () => {
+    // AuthWrapperで定義されたhandleSignOutを呼び出す
+    if ((window as any).handleSignOut) {
+      await (window as any).handleSignOut();
+    }
   };
 
   return (
     <SidebarContainer>
       {/* Logo Section */}
-      <LogoContainer>
-        <img 
+      <LogoContainer sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <LazyImage
           src="/logo/Centra.svg" 
           alt="Centrosome"
+          height="20px"
+          width="auto"
           style={{ 
-            height: '20px', 
-            width: 'auto',
             filter: 'brightness(0) invert(1)'  // SVGを白色に変換
           }}
         />
+        <Tooltip title={mode === 'light' ? 'ダークモードに切り替え' : 'ライトモードに切り替え'}>
+          <IconButton 
+            sx={{ 
+              color: 'white',
+              padding: '4px',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              }
+            }} 
+            onClick={toggleColorMode}
+            size="small"
+          >
+            {mode === 'light' ? <Brightness4 fontSize="small" /> : <Brightness7 fontSize="small" />}
+          </IconButton>
+        </Tooltip>
       </LogoContainer>
 
 

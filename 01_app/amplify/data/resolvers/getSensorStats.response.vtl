@@ -1,0 +1,47 @@
+## getSensorStats クエリ用レスポンスリゾルバー
+## DynamoDBからの統計データ結果を適切な形式に変換
+
+#if($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#if($ctx.result.items.size() == 0)
+  null
+#else
+  #set($item = $ctx.result.items[0])
+  {
+    "deviceId": "$item.deviceId.S",
+    "period": "$item.period.S",
+    "startTime": "$item.startTime.S",
+    "endTime": "$item.endTime.S",
+    "temperatureMax": #if($item.temperatureMax) $item.temperatureMax.N #else null #end,
+    "temperatureMin": #if($item.temperatureMin) $item.temperatureMin.N #else null #end,
+    "temperatureAvg": #if($item.temperatureAvg) $item.temperatureAvg.N #else null #end,
+    "humidityMax": #if($item.humidityMax) $item.humidityMax.N #else null #end,
+    "humidityMin": #if($item.humidityMin) $item.humidityMin.N #else null #end,
+    "humidityAvg": #if($item.humidityAvg) $item.humidityAvg.N #else null #end,
+    "windSpeedMax": #if($item.windSpeedMax) $item.windSpeedMax.N #else null #end,
+    "windSpeedMin": #if($item.windSpeedMin) $item.windSpeedMin.N #else null #end,
+    "windSpeedAvg": #if($item.windSpeedAvg) $item.windSpeedAvg.N #else null #end,
+    "pressureMax": #if($item.pressureMax) $item.pressureMax.N #else null #end,
+    "pressureMin": #if($item.pressureMin) $item.pressureMin.N #else null #end,
+    "pressureAvg": #if($item.pressureAvg) $item.pressureAvg.N #else null #end,
+    "windDirectionMax": #if($item.windDirectionMax) $item.windDirectionMax.N #else null #end,
+    "windDirectionMin": #if($item.windDirectionMin) $item.windDirectionMin.N #else null #end,
+    "windDirectionAvg": #if($item.windDirectionAvg) $item.windDirectionAvg.N #else null #end,
+    "rainfallMax": #if($item.rainfallMax) $item.rainfallMax.N #else null #end,
+    "rainfallMin": #if($item.rainfallMin) $item.rainfallMin.N #else null #end,
+    "rainfallAvg": #if($item.rainfallAvg) $item.rainfallAvg.N #else null #end,
+    "illuminanceMax": #if($item.illuminanceMax) $item.illuminanceMax.N #else null #end,
+    "illuminanceMin": #if($item.illuminanceMin) $item.illuminanceMin.N #else null #end,
+    "illuminanceAvg": #if($item.illuminanceAvg) $item.illuminanceAvg.N #else null #end,
+    "visibilityMax": #if($item.visibilityMax) $item.visibilityMax.N #else null #end,
+    "visibilityMin": #if($item.visibilityMin) $item.visibilityMin.N #else null #end,
+    "visibilityAvg": #if($item.visibilityAvg) $item.visibilityAvg.N #else null #end,
+    "feelsLikeMax": #if($item.feelsLikeMax) $item.feelsLikeMax.N #else null #end,
+    "feelsLikeMin": #if($item.feelsLikeMin) $item.feelsLikeMin.N #else null #end,
+    "feelsLikeAvg": #if($item.feelsLikeAvg) $item.feelsLikeAvg.N #else null #end,
+    "samples": $item.samples.N,
+    "ttl": $item.ttl.N
+  }
+#end

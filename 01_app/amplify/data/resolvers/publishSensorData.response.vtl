@@ -1,0 +1,21 @@
+## リアルタイムセンサーデータ配信用のレスポンスリゾルバー
+## DynamoDBからの結果をGraphQLレスポンス形式に変換
+
+#if($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+## レスポンスデータの構築
+{
+  "deviceId": "$ctx.result.deviceId.S",
+  "timestamp": "$ctx.result.timestamp.S",
+  "temperature": #if($ctx.result.temperature && $ctx.result.temperature.N) $ctx.result.temperature.N #else null #end,
+  "humidity": #if($ctx.result.humidity && $ctx.result.humidity.N) $ctx.result.humidity.N #else null #end,
+  "pressure": #if($ctx.result.pressure && $ctx.result.pressure.N) $ctx.result.pressure.N #else null #end,
+  "windSpeed": #if($ctx.result.windSpeed && $ctx.result.windSpeed.N) $ctx.result.windSpeed.N #else null #end,
+  "windDirection": #if($ctx.result.windDirection && $ctx.result.windDirection.N) $ctx.result.windDirection.N #else null #end,
+  "rainfall": #if($ctx.result.rainfall && $ctx.result.rainfall.N) $ctx.result.rainfall.N #else null #end,
+  "illuminance": #if($ctx.result.illuminance && $ctx.result.illuminance.N) $ctx.result.illuminance.N #else null #end,
+  "visibility": #if($ctx.result.visibility && $ctx.result.visibility.N) $ctx.result.visibility.N #else null #end,
+  "feelsLike": #if($ctx.result.feelsLike && $ctx.result.feelsLike.N) $ctx.result.feelsLike.N #else null #end
+}

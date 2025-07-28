@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Connect",
+        "iot:Subscribe",
+        "iot:Receive",
+        "iot:GetThingShadow"
+      ],
+      "Resource": [
+        "arn:aws:iot:ap-northeast-1:785197721624:client/${cognito-identity.amazonaws.com:sub}",
+        "arn:aws:iot:ap-northeast-1:785197721624:topic/dt/mado/*/data",
+        "arn:aws:iot:ap-northeast-1:785197721624:topicfilter/dt/mado/*/data",
+        "arn:aws:iot:ap-northeast-1:785197721624:thing/*"
+      ]
+    }
+  ]
+}

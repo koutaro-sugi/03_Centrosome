@@ -2,6 +2,7 @@
 import { uasPortAPI } from '../lib/uasPortApi';
 import { initialUASPorts } from '../scripts/initializeUASPorts';
 import polygonData from '../scripts/uasPortPolygons.json';
+import { enforceHttps, checkSecureContext, checkMixedContent } from './security/httpsRedirect';
 
 /**
  * UASポートの自動初期化
@@ -64,10 +65,23 @@ export async function autoInitializeUASPorts() {
  * アプリケーション全体の初期化
  */
 export async function initializeApp() {
+  // HTTPS強制とセキュリティチェック
+  enforceHttps();
+  checkSecureContext();
+  
+  // Mixed Contentチェック（開発環境でのデバッグ用）
+  if (process.env.NODE_ENV === 'development') {
+    // ページロード完了後にチェック
+    window.addEventListener('load', () => {
+      setTimeout(checkMixedContent, 1000);
+    });
+  }
+  
   // UASポートの自動初期化（非同期で実行）
   autoInitializeUASPorts().catch(error => {
     console.error('UAS ports initialization failed:', error);
   });
   
-  // 他の初期化処理があればここに追加
+  // セキュリティイベントログの初期化
+  console.log('Security features initialized');
 }

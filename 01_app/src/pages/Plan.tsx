@@ -283,7 +283,7 @@ export const Plan: React.FC = () => {
   };
 
   return (
-    <Box sx={{ flex: 1, display: 'flex', backgroundColor: '#32495f', position: 'relative' }}>
+    <Box sx={{ flex: 1, display: 'flex', backgroundColor: '#32495f', position: 'relative', height: '100%' }}>
       <Box
         sx={{
           width: isSidebarOpen ? 280 : 0,

@@ -1,0 +1,26 @@
+## getRecentSensorData クエリ用レスポンスリゾルバー
+## DynamoDBからの履歴データ結果を配列形式に変換
+
+#if($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+[
+#foreach($item in $ctx.result.items)
+  {
+    "deviceId": "$item.deviceId.S",
+    "timestamp": "$item.timestamp.S",
+    "temperature": #if($item.temperature) $item.temperature.N #else null #end,
+    "humidity": #if($item.humidity) $item.humidity.N #else null #end,
+    "pressure": #if($item.pressure) $item.pressure.N #else null #end,
+    "windSpeed": #if($item.windSpeed) $item.windSpeed.N #else null #end,
+    "windDirection": #if($item.windDirection) $item.windDirection.N #else null #end,
+    "rainfall": #if($item.rainfall) $item.rainfall.N #else null #end,
+    "illuminance": #if($item.illuminance) $item.illuminance.N #else null #end,
+    "visibility": #if($item.visibility) $item.visibility.N #else null #end,
+    "feelsLike": #if($item.feelsLike) $item.feelsLike.N #else null #end,
+    "dataType": "$item.dataType.S",
+    "ttl": $item.ttl.N
+  }#if($foreach.hasNext),#end
+#end
+]

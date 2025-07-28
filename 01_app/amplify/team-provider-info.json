@@ -1,0 +1,68 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-centraweather-dev-authRole",
+      "UnauthRoleArn": "arn:aws:iam::123456789012:role/amplify-centraweather-dev-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::123456789012:role/amplify-centraweather-dev-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-centraweather-dev-deployment",
+      "StackName": "amplify-centraweather-dev",
+      "StackId": "arn:aws:cloudformation:us-east-1:123456789012:stack/amplify-centraweather-dev/12345678-1234-1234-1234-123456789012"
+    },
+    "categories": {
+      "auth": {
+        "centraweatherauth": {}
+      },
+      "function": {
+        "iotDataProcessor": {
+          "deploymentBucketName": "amplify-centraweather-dev-deployment",
+          "s3Key": "amplify-builds/iotDataProcessor.zip"
+        }
+      }
+    }
+  },
+  "staging": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-centraweather-staging-authRole",
+      "UnauthRoleArn": "arn:aws:iam::123456789012:role/amplify-centraweather-staging-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::123456789012:role/amplify-centraweather-staging-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-centraweather-staging-deployment",
+      "StackName": "amplify-centraweather-staging",
+      "StackId": "arn:aws:cloudformation:us-east-1:123456789012:stack/amplify-centraweather-staging/12345678-1234-1234-1234-123456789012"
+    },
+    "categories": {
+      "auth": {
+        "centraweatherauth": {}
+      },
+      "function": {
+        "iotDataProcessor": {
+          "deploymentBucketName": "amplify-centraweather-staging-deployment",
+          "s3Key": "amplify-builds/iotDataProcessor.zip"
+        }
+      }
+    }
+  },
+  "prod": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-centraweather-prod-authRole",
+      "UnauthRoleArn": "arn:aws:iam::123456789012:role/amplify-centraweather-prod-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::123456789012:role/amplify-centraweather-prod-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-centraweather-prod-deployment",
+      "StackName": "amplify-centraweather-prod",
+      "StackId": "arn:aws:cloudformation:us-east-1:123456789012:stack/amplify-centraweather-prod/12345678-1234-1234-1234-123456789012"
+    },
+    "categories": {
+      "auth": {
+        "centraweatherauth": {}
+      },
+      "function": {
+        "iotDataProcessor": {
+          "deploymentBucketName": "amplify-centraweather-prod-deployment",
+          "s3Key": "amplify-builds/iotDataProcessor.zip"
+        }
+      }
+    }
+  }
+}

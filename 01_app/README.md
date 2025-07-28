@@ -1,46 +1,109 @@
-# Getting Started with Create React App
+# Centra - Flight Management System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Centra is a comprehensive flight management system that integrates weather data, MAVLink telemetry, and AWS IoT sensor monitoring for aviation operations.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Flight Planning**: Create and manage flight plans with waypoint editing
+- **Weather Integration**: Real-time weather data from Windy API and AWS IoT sensors
+- **MAVLink Telemetry**: Live telemetry data from aircraft via WebSocket
+- **Sensor Monitoring**: AWS IoT Core integration for weather station monitoring
+- **Flight Logging**: Comprehensive flight data logging and analysis
 
-### `npm start`
+## Prerequisites
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- Node.js 18.x or higher
+- npm 9.x or higher
+- AWS Account with Amplify, IoT Core, and Cognito configured
+- Windy API Key
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Installation
 
-### `npm test`
+1. Clone the repository:
+```bash
+git clone [repository-url]
+cd 03_Centra/01_app
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+2. Install dependencies:
+```bash
+npm install
+```
 
-### `npm run build`
+3. Configure environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your API keys and configuration
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+4. Configure AWS Amplify:
+```bash
+npx ampx configure
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Development
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Start the development server:
+```bash
+npm start
+```
 
-### `npm run eject`
+The application will open at [http://localhost:3000](http://localhost:3000)
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## Building for Production
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Build the production application:
+```bash
+npm run build
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+The build artifacts will be stored in the `build/` directory.
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Deployment
 
-## Learn More
+Deploy to AWS Amplify:
+```bash
+npx ampx deploy
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Project Structure
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```
+src/
+├── components/     # React components
+├── contexts/       # React contexts
+├── hooks/         # Custom React hooks
+├── lib/           # API client libraries
+├── pages/         # Page components
+├── services/      # Service layer (IoT, sensors, etc.)
+├── types/         # TypeScript type definitions
+└── utils/         # Utility functions
+```
+
+## AWS Resources
+
+This application uses the following AWS services:
+
+- **AWS Amplify**: Authentication and hosting
+- **AWS IoT Core**: Real-time sensor data
+- **Amazon Cognito**: User authentication
+- **Amazon DynamoDB**: Data storage
+- **AWS Lambda**: Serverless functions
+- **API Gateway**: REST APIs
+
+## Configuration
+
+### AWS IoT Core
+
+IoT devices should publish to the following topic:
+```
+mado/sensors/{device-id}
+```
+
+### Environment Variables
+
+See `.env.example` for required environment variables.
+
+## License
+
+This project is proprietary software. All rights reserved.

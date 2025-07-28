@@ -32,3 +32,35 @@ amplify/backend/amplify-meta.json
 amplify/backend/awscloudformation
 amplify/.config/local-*
 .amplify-hosting/
+
+# Debug and test files
+debug_*.js
+debug_*.py
+test-data.html
+*.tmp
+*.bak
+*.backup
+*.old
+*_old*
+*_backup*
+
+# Temporary logs and notes
+console.txt
+NBLM.txt
+nblm_answer.txt
+mavproxy_commands.txt
+lookintome.txt
+
+# Mock servers
+mock-server/
+
+# Test data scripts
+seedTestData.*
+cleanupDuplicates.*
+insertInitialData.*
+
+# CDK
+cdk/
+cdk.out/
+*.cdk.staging/
+.cdk.staging/

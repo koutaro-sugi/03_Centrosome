@@ -1,0 +1,36 @@
+## getCurrentSensorData クエリ用リクエストリゾルバー
+## 指定されたデバイスの最新センサーデータを取得
+
+#set($deviceId = $ctx.args.deviceId)
+#set($pk = "DEVICE#${deviceId}")
+
+## 現在時刻から過去1時間のデータを検索範囲とする
+#set($now = $util.time.nowISO8601())
+#set($oneHourAgo = $util.time.parseISO8601($util.time.nowISO8601()))
+#set($oneHourAgo = $util.time.epochMilliSeconds($oneHourAgo))
+#set($oneHourAgo = $oneHourAgo - 3600000)
+#set($oneHourAgo = $util.time.epochMilliSecondsToISO8601($oneHourAgo))
+
+{
+  "version": "2018-05-29",
+  "operation": "Query",
+  "query": {
+    "expression": "PK = :pk AND SK BETWEEN :start AND :end",
+    "expressionValues": {
+      ":pk": $util.dynamodb.toDynamoDBJson($pk),
+      ":start": $util.dynamodb.toDynamoDBJson("${oneHourAgo}#RAW"),
+      ":end": $util.dynamodb.toDynamoDBJson("${now}#RAW")
+    }
+  },
+  "scanIndexForward": false,
+  "limit": 1,
+  "filter": {
+    "expression": "#dataType = :dataType",
+    "expressionNames": {
+      "#dataType": "dataType"
+    },
+    "expressionValues": {
+      ":dataType": $util.dynamodb.toDynamoDBJson("RAW")
+    }
+  }
+}

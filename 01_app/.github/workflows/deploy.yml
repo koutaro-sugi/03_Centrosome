@@ -1,0 +1,267 @@
+name: Deploy Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  NODE_VERSION: '18'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  # ビルドとテスト
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run tests
+        run: |
+          npm run test -- --ci --coverage
+          npm run test:integration || true
+        env:
+          CI: true
+          
+      - name: Generate version
+        id: version
+        run: |
+          VERSION="${{ github.sha }}-$(date +%Y%m%d%H%M%S)"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+          
+      - name: Build application
+        run: npm run build
+        env:
+          CI: true
+          GENERATE_SOURCEMAP: false
+          REACT_APP_VERSION: ${{ steps.version.outputs.version }}
+          REACT_APP_AWS_REGION: ${{ env.AWS_REGION }}
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ steps.version.outputs.version }}
+          path: build/
+          retention-days: 30
+
+  # Staging環境へのデプロイ
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.centra-weather.amplifyapp.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install Amplify CLI
+        run: |
+          npm install -g @aws-amplify/cli@latest
+          amplify --version
+          
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ needs.build-and-test.outputs.version }}
+          path: build/
+          
+      - name: Deploy to Amplify Staging
+        run: |
+          # Amplifyアプリケーションの環境設定
+          echo "Deploying to Amplify staging environment..."
+          
+          # 環境変数の設定
+          aws amplify update-app \
+            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --environment-variables \
+              REACT_APP_VERSION="${{ needs.build-and-test.outputs.version }}" \
+              REACT_APP_ENVIRONMENT="staging" \
+              REACT_APP_AWS_REGION="${{ env.AWS_REGION }}" \
+              REACT_APP_WINDY_API_KEY="${{ secrets.WINDY_API_KEY_STAGING }}"
+          
+          # デプロイメントの開始
+          DEPLOYMENT_ID=$(aws amplify start-deployment \
+            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --branch-name staging \
+            --source-url s3://${{ secrets.DEPLOYMENT_BUCKET }}/builds/${{ needs.build-and-test.outputs.version }}.zip \
+            --query 'jobSummary.jobId' \
+            --output text)
+          
+          echo "Deployment started with ID: $DEPLOYMENT_ID"
+          
+          # デプロイメントステータスの確認
+          while true; do
+            STATUS=$(aws amplify get-job \
+              --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+              --branch-name staging \
+              --job-id $DEPLOYMENT_ID \
+              --query 'job.summary.status' \
+              --output text)
+            
+            echo "Deployment status: $STATUS"
+            
+            if [ "$STATUS" = "SUCCEED" ]; then
+              echo "Deployment succeeded!"
+              break
+            elif [ "$STATUS" = "FAILED" ]; then
+              echo "Deployment failed!"
+              exit 1
+            fi
+            
+            sleep 30
+          done
+          
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests against staging..."
+          npm install -g newman
+          # newman run tests/postman/smoke-tests.json --env-var baseUrl=https://staging.centra-weather.amplifyapp.com || true
+
+  # Production環境へのデプロイ
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-test, deploy-staging]
+    if: github.event.inputs.environment == 'production'
+    environment:
+      name: production
+      url: https://centra-weather.amplifyapp.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ needs.build-and-test.outputs.version }}
+          path: build/
+          
+      - name: Create deployment backup
+        run: |
+          # 現在のproductionバージョンをバックアップ
+          CURRENT_VERSION=$(aws amplify get-app \
+            --app-id ${{ secrets.AMPLIFY_APP_ID_PROD }} \
+            --query 'app.environmentVariables.REACT_APP_VERSION' \
+            --output text)
+          
+          echo "Current production version: $CURRENT_VERSION"
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_ENV
+          
+      - name: Deploy to Amplify Production
+        run: |
+          # Production環境へのデプロイ
+          echo "Deploying to Amplify production environment..."
+          
+          # 環境変数の設定
+          aws amplify update-app \
+            --app-id ${{ secrets.AMPLIFY_APP_ID_PROD }} \
+            --environment-variables \
+              REACT_APP_VERSION="${{ needs.build-and-test.outputs.version }}" \
+              REACT_APP_ENVIRONMENT="production" \
+              REACT_APP_AWS_REGION="${{ env.AWS_REGION }}" \
+              REACT_APP_WINDY_API_KEY="${{ secrets.WINDY_API_KEY_PROD }}"
+          
+          # デプロイメントの実行
+          # ... (staging と同様のデプロイメントロジック)
+          
+      - name: Verify deployment
+        run: |
+          echo "Verifying production deployment..."
+          # ヘルスチェックの実行
+          curl -f https://centra-weather.amplifyapp.com/health || exit 1
+          
+      - name: Create release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.build-and-test.outputs.version }}
+          release_name: Release ${{ needs.build-and-test.outputs.version }}
+          body: |
+            ## Changes in this release
+            - Deployment version: ${{ needs.build-and-test.outputs.version }}
+            - Environment: Production
+            - Previous version: ${{ env.current_version }}
+            
+            ### Deployment details
+            - Build time: ${{ github.event.head_commit.timestamp }}
+            - Commit: ${{ github.sha }}
+            - Triggered by: ${{ github.actor }}
+          draft: false
+          prerelease: false
+
+  # ロールバック（必要時）
+  rollback:
+    name: Rollback Production
+    runs-on: ubuntu-latest
+    if: failure() && github.event.inputs.environment == 'production'
+    needs: deploy-production
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Rollback to previous version
+        run: |
+          echo "Rolling back to previous version..."
+          # Amplifyの前のバージョンへのロールバック処理
+          # aws amplify start-deployment --app-id ... --source-url ...

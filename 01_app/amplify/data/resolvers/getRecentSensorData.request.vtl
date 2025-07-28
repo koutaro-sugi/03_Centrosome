@@ -1,0 +1,40 @@
+## getRecentSensorData クエリ用リクエストリゾルバー
+## 指定された期間の履歴データを取得
+
+#set($deviceId = $ctx.args.deviceId)
+#set($minutes = $ctx.args.minutes)
+#if(!$minutes)
+  #set($minutes = 60)
+#end
+
+#set($pk = "DEVICE#${deviceId}")
+
+## 指定された分数前から現在までの時間範囲を計算
+#set($now = $util.time.nowISO8601())
+#set($startTime = $util.time.parseISO8601($util.time.nowISO8601()))
+#set($startTime = $util.time.epochMilliSeconds($startTime))
+#set($startTime = $startTime - ($minutes * 60 * 1000))
+#set($startTime = $util.time.epochMilliSecondsToISO8601($startTime))
+
+{
+  "version": "2018-05-29",
+  "operation": "Query",
+  "query": {
+    "expression": "PK = :pk AND SK BETWEEN :start AND :end",
+    "expressionValues": {
+      ":pk": $util.dynamodb.toDynamoDBJson($pk),
+      ":start": $util.dynamodb.toDynamoDBJson("${startTime}#RAW"),
+      ":end": $util.dynamodb.toDynamoDBJson("${now}#RAW")
+    }
+  },
+  "scanIndexForward": true,
+  "filter": {
+    "expression": "#dataType = :dataType",
+    "expressionNames": {
+      "#dataType": "dataType"
+    },
+    "expressionValues": {
+      ":dataType": $util.dynamodb.toDynamoDBJson("RAW")
+    }
+  }
+}

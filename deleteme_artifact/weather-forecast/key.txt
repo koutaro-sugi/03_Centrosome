@@ -1,5 +1,0 @@
-# Point Forecast APIのキー
-export WINDY_POINT_API_KEY='teZhTIh7xIOudBqbi6fvV8jGfPSIsyZh'
-
-# Map Forecast APIのキー
-export WINDY_MAP_API_KEY='NiAINLsKKDNhiIy3bwN7y05CNzKRU4s3s'

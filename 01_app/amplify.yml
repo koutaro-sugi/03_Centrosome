@@ -4,10 +4,63 @@ applications:
       phases:
         preBuild:
           commands:
+            # Node.jsバージョンの表示
+            - node --version
+            - npm --version
+            # 依存関係のインストール
             - npm ci --cache .npm --prefer-offline
+            # 環境変数の設定
+            - |
+              if [ "$AWS_BRANCH" = "main" ]; then
+                echo "Building for production"
+                cp .env.production .env
+              elif [ "$AWS_BRANCH" = "staging" ]; then
+                echo "Building for staging"
+                cp .env.staging .env
+              else
+                echo "Building for development"
+              fi
+            # ビルド情報の追加
+            - echo "REACT_APP_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> .env
+            - echo "REACT_APP_COMMIT_SHA=$AWS_COMMIT_ID" >> .env
+            - echo "REACT_APP_BRANCH=$AWS_BRANCH" >> .env
         build:
           commands:
+            # テストの実行
+            - npm run test -- --ci --coverage --watchAll=false
+            # TypeScriptの型チェック
+            - npx tsc --noEmit
+            # ビルドの実行
             - npm run build
+            # ビルドサイズの確認
+            - |
+              echo "Build size:"
+              du -sh build/
+              find build -name "*.js" -o -name "*.css" | head -10 | xargs ls -lh
+        postBuild:
+          commands:
+            # セキュリティヘッダーの設定用ファイル作成
+            - |
+              cat > build/_headers <<EOF
+              /*
+                X-Frame-Options: DENY
+                X-Content-Type-Options: nosniff
+                X-XSS-Protection: 1; mode=block
+                Referrer-Policy: strict-origin-when-cross-origin
+                Permissions-Policy: camera=(), microphone=(), geolocation=()
+              
+              /*.js
+                Cache-Control: public, max-age=31536000, immutable
+              
+              /*.css
+                Cache-Control: public, max-age=31536000, immutable
+              
+              /index.html
+                Cache-Control: no-cache, no-store, must-revalidate
+              
+              /static/media/*
+                Cache-Control: public, max-age=31536000, immutable
+              EOF
       artifacts:
         baseDirectory: build
         files:
@@ -16,4 +69,11 @@ applications:
         paths:
           - .npm/**/*
           - node_modules/**/*
+      customHeaders:
+        - pattern: '**/*'
+          headers:
+            - key: 'Strict-Transport-Security'
+              value: 'max-age=31536000; includeSubDomains'
+            - key: 'Content-Security-Policy'
+              value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.amazonaws.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.amazonaws.com wss://*.amazonaws.com https://*.amplify.aws"
     appRoot: .

@@ -101,7 +101,7 @@ export const PreFlight: React.FC = () => {
   const [forecastSize, setForecastSize] = useLocalStorage('preflight_forecast_size', { width: 400, height: 600 });
   
   // PlanDetailsコンポーネントの表示状態をLocalStorageに保持 (デフォルトをtrueに変更)
-  const [showPlanDetails, setShowPlanDetails] = useLocalStorage('preflight_show_plan_details', true);
+  const [showPlanDetails] = useLocalStorage('preflight_show_plan_details', true);
   
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [planName, setPlanName] = useState('');

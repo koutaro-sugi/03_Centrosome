@@ -584,26 +584,30 @@ export const useMAVLinkWebSocket = ({
             }
             
             case MAVLinkMessageType.SCALED_IMU2: {
-              const imu2 = parser.current.parseScaledImu2(message.payload);
+              // const imu2 = parser.current.parseScaledImu2(message.payload);
               // IMU2データを処理（必要に応じて）
+              parser.current.parseScaledImu2(message.payload);
               break;
             }
             
             case MAVLinkMessageType.SCALED_IMU3: {
-              const imu3 = parser.current.parseScaledImu3(message.payload);
+              // const imu3 = parser.current.parseScaledImu3(message.payload);
               // IMU3データを処理（必要に応じて）
+              parser.current.parseScaledImu3(message.payload);
               break;
             }
             
             case MAVLinkMessageType.RAW_IMU: {
-              const rawImu = parser.current.parseRawImu(message.payload);
+              // const rawImu = parser.current.parseRawImu(message.payload);
               // 生IMUデータを処理（必要に応じて）
+              parser.current.parseRawImu(message.payload);
               break;
             }
             
             case MAVLinkMessageType.RAW_PRESSURE: {
-              const rawPressure = parser.current.parseRawPressure(message.payload);
+              // const rawPressure = parser.current.parseRawPressure(message.payload);
               // 生圧力データを処理（必要に応じて）
+              parser.current.parseRawPressure(message.payload);
               break;
             }
             
@@ -636,14 +640,16 @@ export const useMAVLinkWebSocket = ({
             }
             
             case MAVLinkMessageType.AHRS2: {
-              const ahrs2 = parser.current.parseAhrs2(message.payload);
+              // const ahrs2 = parser.current.parseAhrs2(message.payload);
               // AHRS2データを処理（必要に応じて）
+              parser.current.parseAhrs2(message.payload);
               break;
             }
             
             case MAVLinkMessageType.AHRS3: {
-              const ahrs3 = parser.current.parseAhrs3(message.payload);
+              // const ahrs3 = parser.current.parseAhrs3(message.payload);
               // AHRS3データを処理（必要に応じて）
+              parser.current.parseAhrs3(message.payload);
               break;
             }
             

@@ -1,0 +1,24 @@
+## リアルタイムセンサーデータ配信用のリクエストリゾルバー
+## Lambda関数からのリアルタイムデータをSubscriptionに配信
+
+{
+  "version": "2017-02-28",
+  "operation": "PutItem",
+  "key": {
+    "id": $util.dynamodb.toDynamoDBJson($util.autoId())
+  },
+  "attributeValues": {
+    "deviceId": $util.dynamodb.toDynamoDBJson($ctx.args.input.deviceId),
+    "timestamp": $util.dynamodb.toDynamoDBJson($ctx.args.input.timestamp),
+    "temperature": #if($ctx.args.input.temperature) $util.dynamodb.toDynamoDBJson($ctx.args.input.temperature) #else $util.dynamodb.toDynamoDBJson(null) #end,
+    "humidity": #if($ctx.args.input.humidity) $util.dynamodb.toDynamoDBJson($ctx.args.input.humidity) #else $util.dynamodb.toDynamoDBJson(null) #end,
+    "pressure": #if($ctx.args.input.pressure) $util.dynamodb.toDynamoDBJson($ctx.args.input.pressure) #else $util.dynamodb.toDynamoDBJson(null) #end,
+    "windSpeed": #if($ctx.args.input.windSpeed) $util.dynamodb.toDynamoDBJson($ctx.args.input.windSpeed) #else $util.dynamodb.toDynamoDBJson(null) #end,
+    "windDirection": #if($ctx.args.input.windDirection) $util.dynamodb.toDynamoDBJson($ctx.args.input.windDirection) #else $util.dynamodb.toDynamoDBJson(null) #end,
+    "rainfall": #if($ctx.args.input.rainfall) $util.dynamodb.toDynamoDBJson($ctx.args.input.rainfall) #else $util.dynamodb.toDynamoDBJson(null) #end,
+    "illuminance": #if($ctx.args.input.illuminance) $util.dynamodb.toDynamoDBJson($ctx.args.input.illuminance) #else $util.dynamodb.toDynamoDBJson(null) #end,
+    "visibility": #if($ctx.args.input.visibility) $util.dynamodb.toDynamoDBJson($ctx.args.input.visibility) #else $util.dynamodb.toDynamoDBJson(null) #end,
+    "feelsLike": #if($ctx.args.input.feelsLike) $util.dynamodb.toDynamoDBJson($ctx.args.input.feelsLike) #else $util.dynamodb.toDynamoDBJson(null) #end,
+    "ttl": $util.dynamodb.toDynamoDBJson($util.time.nowEpochSeconds() + 300)
+  }
+}

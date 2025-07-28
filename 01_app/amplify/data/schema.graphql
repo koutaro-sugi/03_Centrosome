@@ -1,0 +1,128 @@
+# Weather Dashboard GraphQLスキーマ定義
+# CentraSensorData統合テーブル用のスキーマ仕様
+# 設計書に基づく単一テーブル設計のGraphQL API
+
+# このファイルは設計書に記載されたGraphQLスキーマの仕様を文書化するためのものです
+# Amplify Gen2では、resource.tsファイルでスキーマを定義し、
+# 以下の機能が自動的に生成されます：
+
+# 1. CentraSensorDataモデル（統合テーブル）
+#    - PK: String! (パーティションキー: "DEVICE#{deviceId}")
+#    - SK: String! (ソートキー: "{timestamp}#{type}")
+#    - type: Enum ['RAW', 'STATS_10MIN'] (データタイプ)
+#    - deviceId: String! (デバイスID)
+#    - timestamp: String! (ISO 8601タイムスタンプ)
+#    - ttl: Int! (TTL: RAW=3600秒, STATS_10MIN=86400秒)
+#    
+#    # 生データフィールド（type=RAWの場合）
+#    - temperature: Float (気温 ℃)
+#    - humidity: Float (湿度 %)
+#    - pressure: Float (気圧 hPa)
+#    - windSpeed: Float (風速 m/s)
+#    - windDirection: Float (風向 度)
+#    - rainfall: Float (降水量 mm)
+#    - illuminance: Float (照度 lux)
+#    - visibility: Float (視程 km)
+#    - feelsLike: Float (体感温度 ℃)
+#    
+#    # 統計データフィールド（type=STATS_10MINの場合）
+#    - temperatureMax/Min/Avg: Float (温度統計)
+#    - humidityMax/Min/Avg: Float (湿度統計)
+#    - windSpeedMax/Min/Avg: Float (風速統計)
+#    - pressureMax/Min/Avg: Float (気圧統計)
+#    - windDirectionMax/Min/Avg: Float (風向統計)
+#    - rainfallMax/Min/Avg: Float (降水量統計)
+#    - illuminanceMax/Min/Avg: Float (照度統計)
+#    - visibilityMax/Min/Avg: Float (視程統計)
+#    - feelsLikeMax/Min/Avg: Float (体感温度統計)
+#    - samples: Int (サンプル数)
+#    - period: Enum ['HOUR', 'DAY'] (統計期間)
+#    - startTime: String (統計開始時刻)
+#    - endTime: String (統計終了時刻)
+
+# 2. 自動生成されるクエリ
+#    - listCentraSensorData: [CentraSensorData]
+#    - getCentraSensorData(PK: ID!, SK: ID!): CentraSensorData
+#    - listByDeviceAndTime(deviceId: ID!, timestamp: ModelStringKeyConditionInput): [CentraSensorData]
+#    - listByDeviceTypeAndTime(deviceId: ID!, typeTimestamp: ModelStringKeyConditionInput): [CentraSensorData]
+
+# 3. 自動生成されるミューテーション
+#    - createCentraSensorData(input: CreateCentraSensorDataInput!): CentraSensorData
+#    - updateCentraSensorData(input: UpdateCentraSensorDataInput!): CentraSensorData
+#    - deleteCentraSensorData(input: DeleteCentraSensorDataInput!): CentraSensorData
+#    - publishSensorData(input: SensorDataInput!): SensorData (リアルタイム配信用)
+
+# 4. 自動生成されるサブスクリプション
+#    - onCreateCentraSensorData: CentraSensorData
+#    - onUpdateCentraSensorData: CentraSensorData
+#    - onDeleteCentraSensorData: CentraSensorData
+#    - onSensorDataUpdate(deviceId: ID!): SensorData (リアルタイム更新用)
+
+# 5. Global Secondary Index (GSI)
+#    - GSI1: deviceId (PK) + timestamp (SK) - 時系列クエリ用
+#    - GSI2: deviceId (PK) + type + timestamp (SK) - データタイプ別クエリ用
+
+# 6. TTL設定
+#    - ttl属性による自動削除
+#    - RAWデータ: 1時間後（3600秒）
+#    - 統計データ: 24時間後（86400秒）
+
+# 7. 使用例クエリ
+# 
+# # 最新の生データを取得
+# query GetLatestRawData($deviceId: ID!) {
+#   listByDeviceTypeAndTime(
+#     deviceId: $deviceId
+#     typeTimestamp: { beginsWith: "RAW" }
+#     sortDirection: DESC
+#     limit: 1
+#   ) {
+#     items {
+#       deviceId
+#       timestamp
+#       temperature
+#       humidity
+#       windSpeed
+#       # ... その他のフィールド
+#     }
+#   }
+# }
+# 
+# # 過去1時間の生データを取得
+# query GetHourlyRawData($deviceId: ID!, $startTime: String!) {
+#   listByDeviceAndTime(
+#     deviceId: $deviceId
+#     timestamp: { ge: $startTime }
+#     filter: { type: { eq: RAW } }
+#   ) {
+#     items {
+#       deviceId
+#       timestamp
+#       temperature
+#       humidity
+#       windSpeed
+#       # ... その他のフィールド
+#     }
+#   }
+# }
+# 
+# # 統計データを取得
+# query GetStatsData($deviceId: ID!) {
+#   listByDeviceTypeAndTime(
+#     deviceId: $deviceId
+#     typeTimestamp: { beginsWith: "STATS_10MIN" }
+#     sortDirection: DESC
+#     limit: 6  # 過去1時間分（10分×6）
+#   ) {
+#     items {
+#       deviceId
+#       timestamp
+#       temperatureMax
+#       temperatureMin
+#       temperatureAvg
+#       windSpeedMax
+#       samples
+#       # ... その他の統計フィールド
+#     }
+#   }
+# }
