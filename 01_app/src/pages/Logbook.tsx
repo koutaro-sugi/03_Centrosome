@@ -133,6 +133,13 @@ export const Logbook: React.FC = () => {
   // 地点管理
   const { createLocation, incrementUsage } = useFlightLocation(userId);
 
+  // JST変換のヘルパー関数
+  const toJSTISOString = (date: Date): string => {
+    const jstOffset = 9 * 60; // JST = UTC+9
+    const jstTime = new Date(date.getTime() + jstOffset * 60 * 1000);
+    return jstTime.toISOString();
+  };
+
   // 住所から地名を抽出するヘルパー関数
   const extractPlaceName = (address: string): string => {
     // 日本を除去
@@ -326,14 +333,14 @@ export const Logbook: React.FC = () => {
       // 飛行記録を保存
       const flightRecord = {
         // 必須フィールド
-        flightDate: recordingStartTime!.toISOString().split("T")[0],
+        flightDate: toJSTISOString(recordingStartTime!).split("T")[0],
         pilotName: pilot?.name || "",
         registrationNumber: aircraft?.registrationNumber || "",
 
         // オプションフィールド
         pilotId: selectedPilot || "",
         aircraftId: selectedAircraft || "",
-        date: recordingStartTime!.toISOString().split("T")[0],
+        date: toJSTISOString(recordingStartTime!).split("T")[0],
         squawk: currentTime
           .toTimeString()
           .split(" ")[0]
@@ -374,18 +381,59 @@ export const Logbook: React.FC = () => {
               uasportCode: landingLocation.uasportCode,
             }
           : undefined,
-        flightStartTime: recordingStartTime!.toISOString(),
-        flightEndTime: new Date().toISOString(),
-        takeoffTime: recordingStartTime!.toISOString(),
-        landingTime: new Date().toISOString(),
+        flightStartTime: toJSTISOString(recordingStartTime!),
+        flightEndTime: toJSTISOString(new Date()),
+        takeoffTime: toJSTISOString(recordingStartTime!),
+        landingTime: toJSTISOString(new Date()),
         flightDuration: Math.floor(recordingTime / 60),
         flightPurpose:
           flightPurpose === "other" ? customPurpose : flightPurpose,
         remarks: "",
       };
 
-      await flightLogAPI.create(userId, flightRecord);
+      const saved = await flightLogAPI.create(userId, flightRecord);
       console.log("Flight record saved:", flightRecord);
+
+      // Google Sheetsへの書き込み
+      try {
+        let functionUrl =
+          "https://b7p6x4dq5772mqsysgg7ttndde0araek.lambda-url.ap-northeast-1.on.aws/";
+        try {
+          const response = await fetch("/amplify_outputs.json");
+          if (response.ok) {
+            const outputs = await response.json();
+            functionUrl = outputs?.custom?.logbookToSheetsUrl || functionUrl;
+          }
+        } catch (error) {
+          console.warn(
+            "Failed to load amplify_outputs.json, using fallback URL"
+          );
+        }
+        const url = process.env.REACT_APP_LOGBOOK_TO_SHEETS_URL || functionUrl;
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            flightLog: saved,
+            registrationNumber: saved.registrationNumber,
+            aircraftName: aircraft?.name || "", // 機体名を追加
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log("Flight record synced to Google Sheets:", result);
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+      } catch (sheetsError) {
+        console.error("Failed to sync to Google Sheets:", sheetsError);
+        // Google Sheetsエラーは警告として表示し、アプリの流れは継続
+        alert(
+          "飛行記録は保存されましたが、Google Sheetsへの同期に失敗しました。"
+        );
+      }
 
       setIsRecording(false);
       setShowStopConfirm(false);

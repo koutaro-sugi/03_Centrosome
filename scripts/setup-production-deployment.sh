@@ -75,31 +75,22 @@ echo "=============================="
 
 echo ""
 
-# Step 2: IAM Permissions
-echo "🔧 Step 2: IAM Permissions Setup"
-echo "================================"
-./scripts/setup-amplify-permissions.sh
+# Step 2: Create Amplify Service Role
+echo "🏗️ Step 2: Amplify Service Role Creation"
+echo "========================================"
+./scripts/create-amplify-service-role.sh
 
 echo ""
 
-# Step 3: Verify Amplify App
-echo "🔍 Step 3: Amplify App Verification"
-echo "=================================="
-
-print_info "Checking for Amplify apps..."
-APPS=$(aws amplify list-apps --region "$REGION" --query 'apps[].{Name:name,AppId:appId,Domain:defaultDomain}' --output table 2>/dev/null)
-
-if [ $? -eq 0 ]; then
-    echo "$APPS"
-    print_status "Amplify apps found"
-else
-    print_warning "Could not list Amplify apps. You may need to create the app manually."
-fi
+# Step 3: Create/Configure Amplify App
+echo "🚀 Step 3: Amplify App Creation & Configuration"
+echo "=============================================="
+./scripts/create-amplify-app.sh
 
 echo ""
 
 # Step 4: Final Instructions
-echo "🎯 Step 4: Deployment Instructions"
+echo "🎯 Step 4: Final Deployment Instructions"
 echo "=================================="
 
 print_info "Manual steps to complete deployment:"
