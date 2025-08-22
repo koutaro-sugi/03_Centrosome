@@ -1,0 +1,46 @@
+{
+  "model": "opus",
+  "cleanupPeriodDays": 90,
+  "includeCoAuthoredBy": true,
+  "env": {
+    "NODE_ENV": "development",
+    "REACT_APP_PROJECT": "centra",
+    "REACT_APP_VERSION": "0.1.0"
+  },
+  "allowedCommands": [
+    "npm",
+    "npx",
+    "git",
+    "aws",
+    "amplify",
+    "node",
+    "yarn",
+    "pnpm",
+    "jest",
+    "tsc",
+    "eslint",
+    "prettier",
+    "react-scripts"
+  ],
+  "excludePatterns": [
+    "node_modules/**",
+    "build/**",
+    "dist/**",
+    "coverage/**",
+    ".git/**",
+    "*.log",
+    "*.tmp",
+    ".DS_Store",
+    "amplify/backend/awscloudformation/**",
+    "amplify/#current-cloud-backend/**"
+  ],
+  "projectSettings": {
+    "name": "Centra",
+    "type": "React TypeScript Web Application",
+    "mainBranch": "main",
+    "testCommand": "npm test",
+    "buildCommand": "npm run build",
+    "lintCommand": "npm run lint",
+    "startCommand": "npm start"
+  }
+}
