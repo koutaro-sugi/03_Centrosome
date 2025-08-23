@@ -14,7 +14,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 const logbookToSheets = defineFunction({
   name: "logbook-to-sheets",
   entry: "./functions/logbook-to-sheets/handler.ts",
-  runtime: 18,
+  runtime: 20,
   timeout: 60,
   memoryMB: 512,
 });
