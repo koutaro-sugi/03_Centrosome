@@ -7,6 +7,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as iot from "aws-cdk-lib/aws-iot";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as ssm from "aws-cdk-lib/aws-ssm";
 // import { createIoTPolicy, createIoTThingType, createIoTRuleRole, createIoTRule } from './backend/iot/resource';
 // import { configureSensorDataTable, createSensorDataTableConfiguration, addTableMonitoring } from './backend/dynamodb/resource';
 
@@ -15,7 +16,7 @@ const logbookToSheets = defineFunction({
   name: "logbook-to-sheets",
   entry: "./functions/logbook-to-sheets/handler.ts",
   runtime: 20,
-  timeout: 60,
+  timeoutSeconds: 60,
   memoryMB: 512,
 });
 
@@ -74,12 +75,12 @@ backend.logbookToSheets.resources.lambda.addEnvironment(
   uasLogbookSheetsTable.tableName
 );
 backend.logbookToSheets.resources.lambda.addEnvironment(
-  "GOOGLE_CREDENTIALS_JSON",
-  process.env.GOOGLE_CREDENTIALS_JSON || ""
-);
-backend.logbookToSheets.resources.lambda.addEnvironment(
   "DRIVE_FOLDER_ID",
   process.env.DRIVE_FOLDER_ID || ""
+);
+backend.logbookToSheets.resources.lambda.addEnvironment(
+  "PARENT_DRIVE_FOLDER_ID",
+  process.env.PARENT_DRIVE_FOLDER_ID || ""
 );
 backend.logbookToSheets.resources.lambda.addEnvironment(
   "SHARE_WITH_EMAILS",
@@ -88,6 +89,48 @@ backend.logbookToSheets.resources.lambda.addEnvironment(
 backend.logbookToSheets.resources.lambda.addEnvironment(
   "AIRCRAFT_TABLE",
   backend.data.resources.tables["Aircraft"].tableName
+);
+
+// Centralized secret via SSM Parameter Store (SecureString)
+// Use SSM path from env at synth time, or default shared path
+const ssmGoogleCredentialsPath =
+  process.env.SSM_GOOGLE_CREDENTIALS_PATH || "/shared/google/sa-json";
+
+// Configure Amplify runtime shim to resolve SSM parameters into env vars at cold start and refresh
+const amplifySsmEnvConfig = JSON.stringify({
+  GOOGLE_CREDENTIALS_JSON: {
+    path: ssmGoogleCredentialsPath,
+    sharedPath: ssmGoogleCredentialsPath,
+  },
+});
+
+backend.logbookToSheets.resources.lambda.addEnvironment(
+  "AMPLIFY_SSM_ENV_CONFIG",
+  amplifySsmEnvConfig
+);
+
+// Grant SSM read permissions (restrict to shared/google/* path) and KMS decrypt
+backend.logbookToSheets.resources.lambda.addToRolePolicy(
+  new iam.PolicyStatement({
+    effect: iam.Effect.ALLOW,
+    actions: [
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+      "ssm:GetParametersByPath",
+    ],
+    resources: [
+      `arn:aws:ssm:${region}:${accountId}:parameter/shared/google/*`,
+      `arn:aws:ssm:${region}:${accountId}:parameter${ssmGoogleCredentialsPath.startsWith("/") ? ssmGoogleCredentialsPath : "/" + ssmGoogleCredentialsPath}`,
+    ],
+  })
+);
+
+backend.logbookToSheets.resources.lambda.addToRolePolicy(
+  new iam.PolicyStatement({
+    effect: iam.Effect.ALLOW,
+    actions: ["kms:Decrypt"],
+    resources: ["*"],
+  })
 );
 
 // Function URL with proper CORS configuration
@@ -108,5 +151,10 @@ backend.addOutput({
       description: "AWS Region",
     },
     logbookToSheetsUrl: functionUrl.url,
+    parentFolderId: {
+      value: process.env.PARENT_DRIVE_FOLDER_ID || "",
+      description:
+        "Google Drive parent folder ID for frontend-created workbooks",
+    },
   },
 });

@@ -6,12 +6,12 @@
     "@aws-amplify/auth": "^6.14.0",
     "@aws-amplify/pubsub": "^6.1.60",
     "@aws-amplify/ui-react": "^6.11.2",
-    "@aws-sdk/client-cloudwatch": "^3.848.0",
+    "@aws-sdk/client-cloudwatch": "^3.849.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.849.0",
-    "@aws-sdk/client-dynamodb": "^3.840.0",
-    "@aws-sdk/client-iot": "^3.848.0",
-    "@aws-sdk/credential-provider-node": "^3.840.0",
-    "@aws-sdk/lib-dynamodb": "^3.840.0",
+    "@aws-sdk/client-dynamodb": "^3.849.0",
+    "@aws-sdk/client-iot": "^3.849.0",
+    "@aws-sdk/credential-provider-node": "^3.849.0",
+    "@aws-sdk/lib-dynamodb": "^3.849.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.2.0",
@@ -28,6 +28,8 @@
     "@types/react-router-dom": "^5.3.3",
     "@types/uuid": "^10.0.0",
     "@types/websocket": "^1.0.10",
+    "ajv": "6.12.6",
+    "ajv-keywords": "3.5.2",
     "aws-amplify": "^6.15.4",
     "aws-iot-device-sdk-v2": "^1.22.0",
     "buffer": "^6.0.3",
@@ -53,7 +55,8 @@
     "util": "^0.12.5",
     "uuid": "^11.1.0",
     "web-vitals": "^2.1.4",
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "googleapis": "^140.0.1"
   },
   "scripts": {
     "start": "react-app-rewired start",
@@ -72,7 +75,11 @@
     "build:production": "REACT_APP_ENVIRONMENT=production npm run build",
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "precommit": "npm run lint && npm run typecheck && npm run test:ci",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "dev:sync": "fish scripts/dev-workflow.fish",
+    "dev:sync:restart": "fish scripts/dev-workflow.fish --restart",
+    "drive:ls": "node scripts/list-drive-children.js",
+    "drive:move": "node scripts/move-drive-file.js"
   },
   "eslintConfig": {
     "extends": [
@@ -95,9 +102,12 @@
   "devDependencies": {
     "@aws-amplify/backend": "^1.16.1",
     "@aws-amplify/backend-cli": "^1.8.0",
-    "@aws-sdk/client-dynamodb-streams": "^3.848.0",
+    "@aws-sdk/client-dynamodb-streams": "^3.849.0",
+    "@aws-sdk/client-ssm": "^3.849.0",
     "@cypress/react": "^9.0.1",
     "@shelf/jest-dynamodb": "^3.5.0",
+    "aws-cdk-lib": "^2.212.0",
+    "constructs": "^10.4.2",
     "create-amplify": "^1.2.0",
     "cypress": "^14.5.3",
     "cypress-real-events": "^1.14.0",

@@ -12,7 +12,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 7. [開発ワークフロー](#開発ワークフロー)
 8. [コード品質基準](#コード品質基準)
 9. [重要な注意事項](#重要な注意事項)
-10. [Kiro風実装フロー](#kiro風実装フロー)
 
 ## プロジェクト固有指針
 
@@ -33,11 +32,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **名称**: Centra (セントラ)
 - **種別**: ドローン運航管理システム（Web Application）
 - **技術スタック**: 
-  - Frontend: React + TypeScript + Tailwind CSS
-  - Backend: AWS Amplify Gen 2
-  - Database: DynamoDB
+  - Frontend: React 18.3.1 + TypeScript 5.4.5 + Material-UI 7.2.0
+  - Backend: AWS Amplify Gen 2 (1.16.1)
+  - Database: Amazon DynamoDB
   - IoT: AWS IoT Core (Mado sensor integration)
-  - Weather API: OpenWeatherMap
+  - Charts: Chart.js 4.5.0 + react-chartjs-2 5.3.0
+  - State: Zustand + React Context
+  - Date: date-fns 4.1.0
 
 ### 主要機能
 1. **リアルタイム監視**: ドローンのテレメトリデータをリアルタイム表示
@@ -100,24 +101,32 @@ git push origin main
 ### ディレクトリ構造
 ```
 03_Centra/
-├── src/
-│   ├── components/        # Reactコンポーネント
-│   │   ├── dashboard/     # ダッシュボード関連
-│   │   ├── flight/        # フライト関連
-│   │   └── weather/       # 天気関連
-│   ├── services/          # APIサービス層
-│   ├── types/            # TypeScript型定義
-│   └── utils/            # ユーティリティ関数
-├── amplify/              # Amplify設定
-├── public/              # 静的ファイル
-└── docs/                # ドキュメント
+├── 01_app/                # メインアプリケーション
+│   ├── src/
+│   │   ├── components/    # Reactコンポーネント
+│   │   │   ├── weather/   # 天気関連（MUI実装）
+│   │   │   └── ...        # その他コンポーネント
+│   │   ├── services/      # APIサービス層
+│   │   │   ├── weatherApi.ts      # 気象API統合
+│   │   │   ├── madoSensorService.ts # Madoセンサー接続
+│   │   │   └── ...        # その他サービス
+│   │   ├── types/         # TypeScript型定義
+│   │   ├── hooks/         # カスタムフック
+│   │   └── pages/         # ページコンポーネント
+│   ├── amplify/           # Amplify Gen2設定
+│   ├── public/            # 静的ファイル
+│   └── docs/              # アプリ固有ドキュメント
+├── 99_docs/               # プロジェクトドキュメント
+└── edge/                  # エッジデバイス設定
 ```
 
-### 重要なファイル
-- `src/components/dashboard/PreFlightOverview.tsx` - フライト前概要表示
-- `src/services/weatherApiService.ts` - 天気API統合
-- `src/services/dynamodbService.ts` - DynamoDB操作
-- `src/types/Weather.ts` - 天気データ型定義
+### 重要なファイル（実装確認済み）
+- `01_app/src/pages/Weather.tsx` - 気象データダッシュボード（Material-UI実装）
+- `01_app/src/services/weatherApi.ts` - 天気API統合
+- `01_app/src/services/madoSensorService.ts` - Madoセンサー接続（WebSocket over MQTT）
+- `01_app/src/components/weather/RealtimeWeatherCardReal.tsx` - リアルタイム気象表示
+- `01_app/src/types/weather.ts` - 天気データ型定義
+- `01_app/docs/WEATHER_DASHBOARD_REQUIREMENTS.md` - 詳細要件定義
 
 ### データフロー
 1. **ドローンテレメトリ**: MAVLink → WebSocket → React Dashboard
@@ -220,10 +229,11 @@ npm test -- --watchAll=false
 - カスタムフック活用
 - 適切なメモ化（useMemo, useCallback）
 
-### Tailwind CSS
-- ユーティリティファースト
-- レスポンシブデザイン必須
-- ダークモード対応考慮
+### Material-UI (MUI)
+- Material-UI 7.2.0 準拠
+- レスポンシブデザイン必須（Grid Legacy使用）
+- テーマシステム活用（useTheme、useMediaQuery）
+- 日本語UI統一
 
 ### セキュリティ
 - 環境変数での秘密情報管理
@@ -243,39 +253,6 @@ npm test -- --watchAll=false
 2. 適切なコミットメッセージ作成
 3. コード変更後の即座のビルドチェック
 4. ドキュメントの同期更新
-
-## Kiro風実装フロー
-
-### タスク開始の儀式
-1. 「タスク[number]「[task name]」を開始します」と宣言
-2. 「まず、タスクの状態を更新してから実装を進めます」と述べる
-3. TodoWriteでタスクをIn Progressに更新
-4. 実装計画を箇条書きで提示
-
-### 調査フェーズ（必須）
-```
-1. package.json確認
-2. 型定義ファイル確認
-3. 既存サービス/API確認
-4. 既存コンポーネント確認
-```
-
-### 実装順序（厳守）
-```
-1. 依存関係インストール（必要時）
-2. メインコンポーネント作成
-3. テストファイル即座作成
-4. index.ts更新
-5. デモコンポーネント作成
-```
-
-### 問題対応優先順位
-```
-Priority 1: 機能が動作
-Priority 2: テスト合格
-Priority 3: TypeScriptエラー解消
-Priority 4: ESLint警告修正
-```
 
 ## ベースCLAUDE.mdからの継承事項
 
@@ -297,5 +274,6 @@ Priority 4: ESLint警告修正
 
 ---
 
-**最終更新**: 2025年7月30日
+**最終更新**: 2025年9月4日
 **適用プロジェクト**: 03_Centra
+**技術仕様**: IMPLEMENTATION_ANALYSIS.md、CORE_REQUIREMENTS.md準拠

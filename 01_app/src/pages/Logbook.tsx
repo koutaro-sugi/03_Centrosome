@@ -35,6 +35,7 @@ import { LocationPicker } from "../components/LocationPicker";
 import { SimpleLocationPicker } from "../components/SimpleLocationPicker";
 import { useFlightLocation } from "../hooks/useFlightLocation";
 import { SlideToConfirm } from "../components/SlideToConfirm";
+import { toJSTISOString } from "../utils/dateTime";
 
 // 点検項目の定義
 const INSPECTION_ITEMS = [
@@ -76,7 +77,61 @@ const INSPECTION_ITEMS = [
 // 飛行概要の選択肢
 const FLIGHT_PURPOSES = ["空撮", "監視", "輸送", "テストフライト", "その他"];
 
-type Screen = "initial" | "inspection" | "flight";
+// チェックリスト項目の定義
+const CHECKLIST_ITEMS = [
+  { id: "aircraftPowerOn", title: "Aircraft Powered On", hasCheckbox: true },
+  {
+    id: "payloadRecognized",
+    title: "Payload Recognized（GB200）",
+    hasCheckbox: true,
+  },
+  {
+    id: "cameraSettings",
+    title: "カメラ設定（IR　ビデオ）",
+    hasCheckbox: true,
+  },
+  { id: "attitudeDisplay", title: "姿勢計表示", hasCheckbox: true },
+  { id: "simRecognition", title: "SIM認識成功", hasCheckbox: true },
+  { id: "simAuthentication", title: "SIM認証成功", hasCheckbox: true },
+  { id: "lteConnection", title: "LTE接続完了", hasCheckbox: true },
+  { id: "allParametersReceived", title: "全パラメータ受信", hasCheckbox: true },
+  { id: "airplaneModeOn", title: "機内モードON", hasCheckbox: true },
+  {
+    id: "vpnConnectionToken",
+    title: "VPN接続（トークンコピー）",
+    hasCheckbox: true,
+  },
+  { id: "airplaneModeOff", title: "機内モードOFF", hasCheckbox: true },
+  { id: "vpnConnectionComplete", title: "VPN接続完了", hasCheckbox: true },
+  { id: "planScreenSelection", title: "Plan画面→Plan選択", hasCheckbox: true },
+  {
+    id: "takeoffLocationCorrection",
+    title: "離陸地点修正（機体アイコンへドラッグ）",
+    hasCheckbox: true,
+  },
+  {
+    id: "landingLocationCorrection",
+    title: "着陸地点修正（離陸地点との距離 0,0）",
+    hasCheckbox: true,
+  },
+  {
+    id: "emergencyLandingCorrection",
+    title: "緊急着陸地点修正（離陸地点との距離 0,0　高度再入力）",
+    hasCheckbox: true,
+  },
+  { id: "planTransmission", title: "Plan送信", hasCheckbox: true },
+  { id: "routeWeather", title: "Route Weather", hasCheckbox: true },
+  { id: "parameterCheck", title: "Parameter Check", hasCheckbox: true },
+  { id: "autoMode", title: "AUTOモード（LED青）", hasCheckbox: true },
+  {
+    id: "appChecklist",
+    title: "アプリチェックリスト スクリーンキャプチャ　カメラ録画",
+    hasCheckbox: true,
+  },
+  { id: "armTakeoff", title: "アーム・離陸 次画面へ", hasCheckbox: false },
+];
+
+type Screen = "initial" | "inspection" | "checklist" | "flight";
 
 export const Logbook: React.FC = () => {
   // TODO: 実際のユーザーIDを使用
@@ -113,6 +168,11 @@ export const Logbook: React.FC = () => {
   >({});
   const [editingNote, setEditingNote] = useState<string | null>(null);
 
+  // チェックリスト画面の状態
+  const [checklistItems, setChecklistItems] = useState<Record<string, boolean>>(
+    {}
+  );
+
   // 飛行記録画面の状態
   const [flightPurpose, setFlightPurpose] = useState<string>("");
   const [customPurpose, setCustomPurpose] = useState<string>("");
@@ -132,13 +192,6 @@ export const Logbook: React.FC = () => {
 
   // 地点管理
   const { createLocation, incrementUsage } = useFlightLocation(userId);
-
-  // JST変換のヘルパー関数
-  const toJSTISOString = (date: Date): string => {
-    const jstOffset = 9 * 60; // JST = UTC+9
-    const jstTime = new Date(date.getTime() + jstOffset * 60 * 1000);
-    return jstTime.toISOString();
-  };
 
   // 住所から地名を抽出するヘルパー関数
   const extractPlaceName = (address: string): string => {
@@ -280,13 +333,24 @@ export const Logbook: React.FC = () => {
     setCurrentScreen("inspection");
   };
 
-  // 飛行開始画面へ進む
+  // チェックリスト画面へ進む
   const handleInspectionComplete = () => {
     const allChecked = INSPECTION_ITEMS.every(
       (item) => inspectionChecks[item.id]
     );
     if (!allChecked) {
       setError("全ての点検項目をチェックしてください");
+      return;
+    }
+    setCurrentScreen("checklist");
+  };
+
+  // 飛行開始画面へ進む
+  const handleChecklistComplete = () => {
+    const checkableItems = CHECKLIST_ITEMS.filter((item) => item.hasCheckbox);
+    const allChecked = checkableItems.every((item) => checklistItems[item.id]);
+    if (!allChecked) {
+      setError("全てのチェックリスト項目をチェックしてください");
       return;
     }
     setCheckCompletedTime(new Date());
@@ -396,48 +460,54 @@ export const Logbook: React.FC = () => {
 
       // Google Sheetsへの書き込み
       try {
-        let functionUrl =
-          "https://b7p6x4dq5772mqsysgg7ttndde0araek.lambda-url.ap-northeast-1.on.aws/";
-        try {
-          const response = await fetch("/amplify_outputs.json");
-          if (response.ok) {
-            const outputs = await response.json();
-            functionUrl = outputs?.custom?.logbookToSheetsUrl || functionUrl;
-          }
-        } catch (error) {
-          console.warn(
-            "Failed to load amplify_outputs.json, using fallback URL"
+        const outputsRes = await fetch("/amplify_outputs.json", {
+          cache: "no-store",
+        });
+        if (!outputsRes.ok) {
+          throw new Error("amplify_outputs.json の取得に失敗しました");
+        }
+        const outputs = await outputsRes.json();
+        const url: string | undefined = outputs?.custom?.logbookToSheetsUrl;
+        if (!url) {
+          throw new Error(
+            "logbookToSheetsUrl がamplify_outputs.jsonに存在しません"
           );
         }
-        const url = process.env.REACT_APP_LOGBOOK_TO_SHEETS_URL || functionUrl;
 
-        const response = await fetch(url, {
+        // 親フォルダIDは /amplify_outputs.json の custom.parentFolderId から取得
+        const parentFolderId = outputs?.custom?.parentFolderId || undefined;
+
+        // 非同期で発火し、画面遷移はブロックしない
+        fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             flightLog: saved,
-            registrationNumber: saved.registrationNumber,
-            aircraftName: aircraft?.name || "", // 機体名を追加
+            registrationNumber: (saved.registrationNumber || "").trim(),
+            aircraftName: aircraft?.name || "",
+            folderId: parentFolderId,
           }),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log("Flight record synced to Google Sheets:", result);
-        } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+        })
+          .then(async (response) => {
+            if (!response.ok) {
+              throw new Error(
+                `HTTP ${response.status}: ${response.statusText}`
+              );
+            }
+            const result = await response.json();
+            console.log("Flight record synced to Google Sheets:", result);
+          })
+          .catch((sheetsError) => {
+            console.error("Failed to sync to Google Sheets:", sheetsError);
+          });
       } catch (sheetsError) {
         console.error("Failed to sync to Google Sheets:", sheetsError);
-        // Google Sheetsエラーは警告として表示し、アプリの流れは継続
-        alert(
-          "飛行記録は保存されましたが、Google Sheetsへの同期に失敗しました。"
-        );
+        // UIブロックしないため、ここではアラートを出さない
       }
 
       setIsRecording(false);
       setShowStopConfirm(false);
-      // 初期画面に戻る
+      // 初期画面に戻る（同期はバックグラウンド継続）
       setCurrentScreen("initial");
     } catch (error) {
       console.error("Failed to save flight record:", error);
@@ -1070,7 +1140,133 @@ export const Logbook: React.FC = () => {
             }
             sx={{ py: 2 }}
           >
-            点検完了
+            チェックリストへ進む
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
+
+  // チェックリスト画面
+  if (currentScreen === "checklist") {
+    return (
+      <Box sx={mobileContainer}>
+        <Box
+          sx={{
+            p: 2,
+            backgroundColor: "#fff",
+            boxShadow: 1,
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <IconButton
+            onClick={() => setCurrentScreen("inspection")}
+            sx={{ mr: 2 }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h6" fontWeight="bold">
+            チェックリスト
+          </Typography>
+        </Box>
+
+        <Box sx={{ flex: 1, overflow: "auto", p: 2 }}>
+          <Stack spacing={1}>
+            {error && (
+              <Alert severity="error" onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
+
+            {CHECKLIST_ITEMS.map((item, index) => (
+              <Paper
+                key={item.id}
+                sx={{
+                  p: 2,
+                  backgroundColor:
+                    item.hasCheckbox && checklistItems[item.id]
+                      ? "#e8f5e9"
+                      : "#fff",
+                  transition: "background-color 0.3s",
+                  cursor: item.hasCheckbox ? "pointer" : "default",
+                  "&:hover": item.hasCheckbox
+                    ? {
+                        backgroundColor: checklistItems[item.id]
+                          ? "#e8f5e9"
+                          : "#f5f5f5",
+                      }
+                    : {},
+                }}
+                onClick={() => {
+                  if (item.hasCheckbox) {
+                    setChecklistItems({
+                      ...checklistItems,
+                      [item.id]: !checklistItems[item.id],
+                    });
+                  }
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Box sx={{ minWidth: 40, textAlign: "center" }}>
+                    <Typography variant="caption" color="text.secondary">
+                      {index + 1}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight="bold"
+                      sx={{
+                        color: "text.primary",
+                      }}
+                    >
+                      {item.title}
+                    </Typography>
+                  </Box>
+                  {item.hasCheckbox && (
+                    <Checkbox
+                      checked={checklistItems[item.id] || false}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setChecklistItems({
+                          ...checklistItems,
+                          [item.id]: e.target.checked,
+                        });
+                      }}
+                      size="large"
+                      sx={{
+                        color: "grey.400",
+                        "&.Mui-checked": { color: "success.main" },
+                      }}
+                    />
+                  )}
+                </Stack>
+              </Paper>
+            ))}
+          </Stack>
+        </Box>
+
+        <Box
+          sx={{
+            p: 2,
+            backgroundColor: "#fff",
+            boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
+          }}
+        >
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            onClick={handleChecklistComplete}
+            disabled={
+              !CHECKLIST_ITEMS.filter((item) => item.hasCheckbox).every(
+                (item) => checklistItems[item.id]
+              )
+            }
+            sx={{ py: 2 }}
+          >
+            飛行開始へ進む
           </Button>
         </Box>
       </Box>
@@ -1090,7 +1286,7 @@ export const Logbook: React.FC = () => {
         }}
       >
         <IconButton
-          onClick={() => setCurrentScreen("initial")}
+          onClick={() => setCurrentScreen("checklist")}
           sx={{
             position: "absolute",
             left: 8,

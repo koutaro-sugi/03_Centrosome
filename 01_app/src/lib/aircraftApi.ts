@@ -1,7 +1,17 @@
-import { PutCommand, QueryCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
-import { dynamodb, TABLE_NAME, EntityType } from './dynamodb';
-import { Aircraft, CreateAircraftInput, UpdateAircraftInput } from '../types/aircraft';
-import { v4 as uuidv4 } from 'uuid';
+import {
+  PutCommand,
+  QueryCommand,
+  UpdateCommand,
+  DeleteCommand,
+} from "@aws-sdk/lib-dynamodb";
+import { dynamodb, TABLE_NAME, EntityType } from "./dynamodb";
+import {
+  Aircraft,
+  CreateAircraftInput,
+  UpdateAircraftInput,
+} from "../types/aircraft";
+import { v4 as uuidv4 } from "uuid";
+import { nowJST } from "../utils/dateTime";
 
 // キー生成ヘルパー
 export const aircraftKeys = {
@@ -15,12 +25,12 @@ export const aircraftKeys = {
 export const aircraftAPI = {
   // 機体を作成
   async create(userId: string, input: CreateAircraftInput): Promise<Aircraft> {
-    const now = new Date().toISOString();
+    const now = nowJST();
     const aircraftId = uuidv4();
-    
+
     const aircraft: Aircraft = {
       ...aircraftKeys.aircraft(userId, aircraftId),
-      entityType: 'AIRCRAFT',
+      entityType: "AIRCRAFT",
       aircraftId,
       userId,
       ...input,
@@ -29,13 +39,13 @@ export const aircraftAPI = {
       updatedAt: now,
       isActive: true,
     };
-    
+
     const command = new PutCommand({
       TableName: TABLE_NAME,
       Item: aircraft,
-      ConditionExpression: 'attribute_not_exists(PK)',
+      ConditionExpression: "attribute_not_exists(PK)",
     });
-    
+
     await dynamodb.send(command);
     return aircraft;
   },
@@ -44,33 +54,33 @@ export const aircraftAPI = {
   async listByUser(userId: string): Promise<Aircraft[]> {
     const command = new QueryCommand({
       TableName: TABLE_NAME,
-      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
       ExpressionAttributeValues: {
-        ':pk': `${EntityType.USER}#${userId}`,
-        ':skPrefix': `${EntityType.AIRCRAFT}#`,
+        ":pk": `${EntityType.USER}#${userId}`,
+        ":skPrefix": `${EntityType.AIRCRAFT}#`,
       },
     });
-    
+
     const result = await dynamodb.send(command);
     const aircrafts = (result.Items || []) as Aircraft[];
-    
+
     // アクティブな機体を上位に、名前順でソート
     return aircrafts.sort((a, b) => {
       if (a.isActive !== b.isActive) {
         return a.isActive ? -1 : 1;
       }
-      return a.name.localeCompare(b.name, 'ja');
+      return a.name.localeCompare(b.name, "ja");
     });
   },
 
   // 機体を更新
   async update(userId: string, input: UpdateAircraftInput): Promise<void> {
     const { aircraftId, ...updates } = input;
-    
+
     const updateExpressions: string[] = [];
     const expressionAttributeNames: Record<string, string> = {};
     const expressionAttributeValues: Record<string, any> = {};
-    
+
     Object.entries(updates).forEach(([key, value]) => {
       if (value !== undefined) {
         updateExpressions.push(`#${key} = :${key}`);
@@ -78,34 +88,39 @@ export const aircraftAPI = {
         expressionAttributeValues[`:${key}`] = value;
       }
     });
-    
-    updateExpressions.push('#updatedAt = :updatedAt');
-    expressionAttributeNames['#updatedAt'] = 'updatedAt';
-    expressionAttributeValues[':updatedAt'] = new Date().toISOString();
-    
+
+    updateExpressions.push("#updatedAt = :updatedAt");
+    expressionAttributeNames["#updatedAt"] = "updatedAt";
+    expressionAttributeValues[":updatedAt"] = nowJST();
+
     const command = new UpdateCommand({
       TableName: TABLE_NAME,
       Key: aircraftKeys.aircraft(userId, aircraftId),
-      UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+      UpdateExpression: `SET ${updateExpressions.join(", ")}`,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
     });
-    
+
     await dynamodb.send(command);
   },
 
   // 飛行時間を追加
-  async addFlightTime(userId: string, aircraftId: string, minutes: number): Promise<void> {
+  async addFlightTime(
+    userId: string,
+    aircraftId: string,
+    minutes: number
+  ): Promise<void> {
     const command = new UpdateCommand({
       TableName: TABLE_NAME,
       Key: aircraftKeys.aircraft(userId, aircraftId),
-      UpdateExpression: 'SET totalFlightTime = totalFlightTime + :minutes, updatedAt = :now',
+      UpdateExpression:
+        "SET totalFlightTime = totalFlightTime + :minutes, updatedAt = :now",
       ExpressionAttributeValues: {
-        ':minutes': minutes,
-        ':now': new Date().toISOString(),
+        ":minutes": minutes,
+        ":now": nowJST(),
       },
     });
-    
+
     await dynamodb.send(command);
   },
 
@@ -120,7 +135,7 @@ export const aircraftAPI = {
       TableName: TABLE_NAME,
       Key: aircraftKeys.aircraft(userId, aircraftId),
     });
-    
+
     await dynamodb.send(command);
   },
 };
