@@ -1,0 +1,29 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "IotConnect",
+      "Effect": "Allow",
+      "Action": [
+        "iot:Connect"
+      ],
+      "Resource": "arn:aws:iot:ap-northeast-1:785197721624:client/centra-web-*"
+    },
+    {
+      "Sid": "IotSubscribe",
+      "Effect": "Allow",
+      "Action": [
+        "iot:Subscribe"
+      ],
+      "Resource": "arn:aws:iot:ap-northeast-1:785197721624:topicfilter/mado/centra/M-X/telemetry"
+    },
+    {
+      "Sid": "IotReceive",
+      "Effect": "Allow",
+      "Action": [
+        "iot:Receive"
+      ],
+      "Resource": "arn:aws:iot:ap-northeast-1:785197721624:topic/mado/centra/M-X/telemetry"
+    }
+  ]
+}

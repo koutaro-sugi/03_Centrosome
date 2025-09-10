@@ -1,0 +1,28 @@
+<handoverDocument>
+  <metadata>
+    <title>{{TITLE}}</title>
+    <author>{{AUTHOR}}</author>
+    <date>{{DATE}}</date>
+    <project>{{PROJECT}}</project>
+    <category>{{CATEGORY}}</category>
+    <tags>{{TAGS}}</tags> <!-- 例: setup,urgent -->
+    <status>draft</status>
+  </metadata>
+  <overview>
+    このドキュメントの目的や位置付けを1〜2段落で記載
+  </overview>
+  <tasks>
+    <task>
+      <description>作業内容の要約</description>
+      <steps>
+        <step>ステップ1</step>
+        <step>ステップ2</step>
+        <step>ステップ3</step>
+      </steps>
+      <notes>注意点や補足</notes>
+    </task>
+  </tasks>
+  <references>
+    <reference path_or_url="関連ファイル/URL"/>
+  </references>
+</handoverDocument>

@@ -50,12 +50,19 @@ const useConfigureAmplify = () => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/amplify_outputs.json", { cache: "no-store" });
+        const res = await fetch(`/amplify_outputs.json?v=${Date.now()}` , { cache: "no-store" });
         if (!res.ok)
           throw new Error(`Failed to load amplify_outputs.json: ${res.status}`);
         const outputs = await res.json();
         if (!cancelled) {
           Amplify.configure(outputs);
+          try {
+            // どの設定を読んだかの可視化（デバッグ用）
+            const idp = outputs?.auth?.identity_pool_id;
+            const appSyncUrl = outputs?.data?.url;
+            // eslint-disable-next-line no-console
+            console.log("[Centra] Amplify outputs loaded", { identityPoolId: idp, appSyncUrl });
+          } catch {}
           setConfigured(true);
         }
       } catch (e) {

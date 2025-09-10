@@ -5,6 +5,32 @@ import polygonData from '../scripts/uasPortPolygons.json';
 import { enforceHttps, checkSecureContext, checkMixedContent } from './security/httpsRedirect';
 
 /**
+ * 開発時のキャッシュ/Service Worker完全クリア（任意）
+ * 有効化するには .env に REACT_APP_DEV_CLEAR_CACHE=true を設定
+ */
+async function clearClientCachesDev() {
+  try {
+    if (process.env.NODE_ENV !== 'development') return;
+    if (process.env.REACT_APP_DEV_CLEAR_CACHE !== 'true') return;
+    // Service Workerの登録解除
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    // ブラウザCache Storageをクリア
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+    // セッション/ローカルストレージ（必要最低限）のクリア（認証情報は消さない）
+    // localStorage.removeItem('amplify-cache'); // 必要に応じて
+    console.log('[Dev] Cleared SW registrations and Cache Storage');
+  } catch (e) {
+    console.warn('[Dev] Failed to clear caches', e);
+  }
+}
+
+/**
  * UASポートの自動初期化
  * DBにデータがない場合のみ初期化を実行
  */
@@ -65,6 +91,8 @@ export async function autoInitializeUASPorts() {
  * アプリケーション全体の初期化
  */
 export async function initializeApp() {
+  // 開発時のキャッシュクリア（任意）
+  clearClientCachesDev();
   // HTTPS強制とセキュリティチェック
   enforceHttps();
   checkSecureContext();

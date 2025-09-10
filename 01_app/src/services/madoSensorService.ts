@@ -6,6 +6,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import mqtt from 'mqtt';
+import { MadoSensorServiceCrt } from './madoSensorServiceCrt';
 
 /**
  * Madoセンサーデータの型定義
@@ -77,10 +78,23 @@ export class MadoSensorService {
    */
   async connect(): Promise<void> {
     try {
+      const debug = process.env.REACT_APP_DEBUG_MQTT === 'true';
+      if (debug) {
+        // eslint-disable-next-line no-console
+        console.log('[MQTT] connect() start', {
+          endpoint: this.config.endpoint,
+          region: this.config.region,
+          clientId: this.config.clientId,
+        });
+      }
       // Cognito認証情報を取得
-      const session = await fetchAuthSession();
+      let session = await fetchAuthSession();
       if (!session.credentials) {
-        throw new Error('Cognito認証情報が取得できません');
+        // 一時クレデンシャルがない場合は強制リフレッシュ
+        session = await fetchAuthSession({ forceRefresh: true });
+        if (!session.credentials) {
+          throw new Error('Cognito認証情報が取得できません');
+        }
       }
 
       // SigV4署名付きWebSocket URLを生成
@@ -90,39 +104,107 @@ export class MadoSensorService {
         session.credentials.sessionToken
       );
 
+      if (debug) {
+        try {
+          const u = new URL(url);
+          // eslint-disable-next-line no-console
+          console.log('[MQTT] presigned URL params', {
+            host: u.host,
+            path: u.pathname,
+            'X-Amz-Date': u.searchParams.get('X-Amz-Date'),
+            'X-Amz-Expires': u.searchParams.get('X-Amz-Expires'),
+            hasSecurityToken: !!u.searchParams.get('X-Amz-Security-Token'),
+          });
+        } catch {}
+      }
+
       // MQTT over WebSocketで接続
       this.client = mqtt.connect(url, {
         clientId: this.config.clientId,
         keepalive: 60,
         reconnectPeriod: 1000,
         connectTimeout: 30 * 1000,
-        rejectUnauthorized: true
+        rejectUnauthorized: true,
+        // AWS IoT Core 互換性のため MQTT 3.1.1 を明示
+        protocolVersion: 4,
+        protocolId: 'MQTT',
+        clean: true,
+        resubscribe: true,
       });
 
       // 接続イベントハンドラ
       this.client.on('connect', () => {
         this.isConnected = true;
+        if (debug) {
+          // eslint-disable-next-line no-console
+          console.log('[MQTT] connected');
+        }
         this.notifyStatusChange('connected');
       });
 
       this.client.on('error', (error) => {
+        if (debug) {
+          // eslint-disable-next-line no-console
+          console.error('[MQTT] error', error);
+        }
         this.notifyStatusChange('error', error);
       });
 
       this.client.on('close', () => {
         this.isConnected = false;
+        if (debug) {
+          // eslint-disable-next-line no-console
+          console.warn('[MQTT] connection closed');
+        }
         this.notifyStatusChange('disconnected');
+      });
+
+      this.client.on('reconnect', () => {
+        if (debug) {
+          // eslint-disable-next-line no-console
+          console.log('[MQTT] reconnecting...');
+        }
+      });
+
+      this.client.on('offline', () => {
+        if (debug) {
+          // eslint-disable-next-line no-console
+          console.log('[MQTT] offline');
+        }
+      });
+
+      this.client.on('end', () => {
+        if (debug) {
+          // eslint-disable-next-line no-console
+          console.log('[MQTT] end');
+        }
       });
 
       // メッセージハンドラ
       this.client.on('message', (topic, payload) => {
         try {
           const message = JSON.parse(payload.toString());
+          if (debug) {
+            // eslint-disable-next-line no-console
+            console.log('[MQTT] message received', { topic });
+          }
           this.handleMessage(topic, message);
         } catch (error) {
           // メッセージパースエラー
         }
       });
+
+      // 低レベルの送受信ログ（開発時のみ）
+      if (debug) {
+        this.client.on('packetsend', (packet: any) => {
+          // eslint-disable-next-line no-console
+          console.log('[MQTT] packetsend', packet?.cmd);
+        });
+        this.client.on('packetreceive', (packet: any) => {
+          // eslint-disable-next-line no-console
+          console.log('[MQTT] packetreceive', packet?.cmd);
+        });
+      }
 
       // 接続完了を待つ
       return new Promise((resolve, reject) => {
@@ -162,9 +244,13 @@ export class MadoSensorService {
     this.dataCallbacks.get(topic)!.push(callback);
 
     // トピックを購読
-    this.client.subscribe(topic, { qos: 1 }, (error) => {
+    this.client.subscribe(topic, { qos: 1 }, (error, granted) => {
       if (error) {
         throw error;
+      }
+      if (process.env.REACT_APP_DEBUG_MQTT === 'true') {
+        // eslint-disable-next-line no-console
+        console.log('[MQTT] subscribed', granted);
       }
     });
   }
@@ -247,7 +333,13 @@ export class MadoSensorService {
     secretAccessKey: string,
     sessionToken?: string
   ): Promise<string> {
-    const host = this.config.endpoint;
+    // Ensure host is a bare hostname (no scheme or path)
+    const host = (this.config.endpoint || '')
+      .replace(/^\s*/,'')
+      .replace(/^https?:\/\//i, '')
+      .replace(/^wss?:\/\//i, '')
+      .replace(/\/.*$/, '')
+      .trim();
     const region = this.config.region;
     const service = 'iotdevicegateway';
     const algorithm = 'AWS4-HMAC-SHA256';
@@ -260,17 +352,29 @@ export class MadoSensorService {
     // Canonical request
     const method = 'GET';
     const canonicalUri = '/mqtt';
-    const canonicalQuerystring = 
-      `X-Amz-Algorithm=${algorithm}&` +
-      `X-Amz-Credential=${encodeURIComponent(accessKeyId + '/' + dateStamp + '/' + region + '/' + service + '/aws4_request')}&` +
-      `X-Amz-Date=${amzDate}&` +
-      `X-Amz-SignedHeaders=host`;
+    // 重要: X-Amz-Expires を含め、キーで辞書順ソートしたクエリ文字列を用いる
+    const queryParams: Record<string, string> = {
+      'X-Amz-Algorithm': algorithm,
+      'X-Amz-Credential': `${accessKeyId}/${dateStamp}/${region}/${service}/aws4_request`,
+      'X-Amz-Date': amzDate,
+      // 有効期限（秒）: まずは互換性重視で5分に設定
+      'X-Amz-Expires': '300',
+      'X-Amz-SignedHeaders': 'host',
+    };
+    if (sessionToken) {
+      // 一時認証情報を使用する場合は、セキュリティトークンも署名対象のクエリに含める
+      queryParams['X-Amz-Security-Token'] = sessionToken;
+    }
+    const sortedKeys = Object.keys(queryParams).sort();
+    const canonicalQuerystring = sortedKeys
+      .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(queryParams[k])}`)
+      .join('&');
     
     const canonicalHeaders = `host:${host}\n`;
     const signedHeaders = 'host';
     const payloadHash = await this.sha256('');
     
-    const canonicalRequest = 
+    const canonicalRequest =
       method + '\n' +
       canonicalUri + '\n' +
       canonicalQuerystring + '\n' +
@@ -292,11 +396,7 @@ export class MadoSensorService {
     
     // Build URL
     let url = `wss://${host}${canonicalUri}?${canonicalQuerystring}&X-Amz-Signature=${signature}`;
-    
-    if (sessionToken) {
-      url += `&X-Amz-Security-Token=${encodeURIComponent(sessionToken)}`;
-    }
-    
+
     return url;
   }
 
@@ -364,20 +464,21 @@ let instance: MadoSensorService | null = null;
 /**
  * MadoSensorServiceのシングルトンインスタンスを取得
  */
-export function getMadoSensorService(): MadoSensorService {
+export function getMadoSensorService(): MadoSensorService | MadoSensorServiceCrt {
   if (!instance) {
-    const endpoint = process.env.REACT_APP_IOT_ENDPOINT;
+    // Allow both keys for backward compatibility
+    const endpoint = (process.env.REACT_APP_IOT_ENDPOINT || process.env.REACT_APP_AWS_IOT_ENDPOINT) as string | undefined;
     const region = process.env.REACT_APP_AWS_REGION || 'ap-northeast-1';
-    
-    if (!endpoint) {
-      throw new Error('REACT_APP_IOT_ENDPOINT環境変数が設定されていません');
-    }
+    if (!endpoint) throw new Error('IoT Core エンドポイントが未設定です。REACT_APP_IOT_ENDPOINT または REACT_APP_AWS_IOT_ENDPOINT を設定してください。');
 
-    instance = new MadoSensorService({
-      endpoint,
-      region
-    });
+    const impl = (process.env.REACT_APP_MQTT_IMPL || 'crt').toLowerCase();
+    if (impl === 'crt') {
+      // Prefer CRT route for robustness
+      // @ts-ignore - we return a compatible subset
+      instance = new MadoSensorServiceCrt({ endpoint, region });
+    } else {
+      instance = new MadoSensorService({ endpoint, region });
+    }
   }
-  
-  return instance;
+  return instance as any;
 }

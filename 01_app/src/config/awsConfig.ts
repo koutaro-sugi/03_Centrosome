@@ -7,7 +7,8 @@ export const awsConfig = {
   // AWS IoT Core設定
   iot: {
     // 実際のエンドポイント（検出済み）
-    endpoint: process.env.REACT_APP_IOT_ENDPOINT || 'a12ai23qgl4xhl-ats.iot.ap-northeast-1.amazonaws.com',
+    // Prefer REACT_APP_IOT_ENDPOINT; fallback to legacy REACT_APP_AWS_IOT_ENDPOINT
+    endpoint: process.env.REACT_APP_IOT_ENDPOINT || process.env.REACT_APP_AWS_IOT_ENDPOINT || 'a12ai23qgl4xhl-ats.iot.ap-northeast-1.amazonaws.com',
     region: process.env.REACT_APP_AWS_REGION || 'ap-northeast-1',
     // トピック設定（実際のセンサートピックに合わせて更新）
     topics: {
