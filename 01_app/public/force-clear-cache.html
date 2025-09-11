@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧹 キャッシュ強制クリア</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        button:hover {
+            background: #218838;
+        }
+
+        .warning {
+            background: #dc3545;
+        }
+
+        .warning:hover {
+            background: #c82333;
+        }
+
+        .log {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: left;
+            margin-top: 20px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧹 Amplify キャッシュ強制クリア</h1>
+        <p>User Pool Client エラーが発生している場合、このページでキャッシュを完全にクリアしてください。</p>
+        <button onclick="clearAllCaches()">🧹 すべてのキャッシュをクリア</button>
+        <button onclick="window.location.reload()" class="warning">🔄 ページリロード</button>
+        <button onclick="window.location.href='/'">🏠 ホームに戻る</button>
+        <div id="log" class="log" style="display: none;">
+            <h3>📋 実行ログ</h3>
+            <div id="logContent"></div>
+        </div>
+    </div>
+    <script>
+        function log(message) {
+            const logEl = document.getElementById('log');
+            const contentEl = document.getElementById('logContent');
+            logEl.style.display = 'block';
+            contentEl.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+            contentEl.scrollTop = contentEl.scrollHeight;
+            console.log(message);
+        }
+
+        async function clearAllCaches() {
+            log('🧹 キャッシュクリア開始...');
+
+            try {
+                // 1. LocalStorage & SessionStorage
+                log('🗑️ LocalStorage & SessionStorage をクリア');
+                localStorage.clear();
+                sessionStorage.clear();
+
+                // 2. IndexedDB
+                log('🗑️ IndexedDB をクリア');
+                if ('indexedDB' in window) {
+                    try {
+                        const databases = await indexedDB.databases();
+                        for (const db of databases) {
+                            if (db.name) {
+                                log(`   - ${db.name} を削除`);
+                                indexedDB.deleteDatabase(db.name);
+                            }
+                        }
+                    } catch (e) {
+                        log('   IndexedDB クリア試行');
+                    }
+                }
+
+                // 3. Service Worker
+                log('🗑️ Service Worker をアンレジスター');
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        for (const registration of registrations) {
+                            await registration.unregister();
+                            log('   Service Worker unregistered');
+                        }
+                    } catch (e) {
+                        log('   Service Worker unregister 試行');
+                    }
+                }
+
+                // 4. Cache API
+                log('🗑️ Cache API をクリア');
+                if ('caches' in window) {
+                    try {
+                        const cacheNames = await caches.keys();
+                        for (const cacheName of cacheNames) {
+                            await caches.delete(cacheName);
+                            log(`   - ${cacheName} を削除`);
+                        }
+                    } catch (e) {
+                        log('   Cache API クリア試行');
+                    }
+                }
+
+                // 5. Cookies (same-origin only)
+                log('🗑️ Cookies をクリア');
+                document.cookie.split(";").forEach(cookie => {
+                    const eqPos = cookie.indexOf("=");
+                    const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                    document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+                });
+
+                log('✅ キャッシュクリア完了！3秒後にリロードします...');
+
+                setTimeout(() => {
+                    window.location.href = '/weather';
+                }, 3000);
+
+            } catch (error) {
+                log('❌ エラー: ' + error.message);
+            }
+        }
+
+        // ページ読み込み時にAmplify設定を表示
+        window.addEventListener('load', () => {
+            log('📊 現在の状況をチェック中...');
+
+            // LocalStorageの内容チェック
+            const amplifyConfig = localStorage.getItem('amplify_config_hash');
+            log('🔧 Amplify Config Hash: ' + (amplifyConfig || 'なし'));
+
+            // その他のAmplify関連キー
+            const keys = Object.keys(localStorage).filter(key =>
+                key.includes('amplify') || key.includes('cognito') || key.includes('aws')
+            );
+
+            if (keys.length > 0) {
+                log('🔑 関連LocalStorageキー: ' + keys.join(', '));
+            } else {
+                log('✅ Amplify関連のLocalStorageキーは見つかりませんでした');
+            }
+        });
+    </script>
+</body>
+
+</html>

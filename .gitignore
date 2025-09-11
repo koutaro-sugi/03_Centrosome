@@ -88,7 +88,10 @@ dist
 
 # Gatsby files
 .cache/
+# Ignore top-level public but allow app public assets
 public
+!01_app/public/
+!01_app/public/**
 
 # Storybook build outputs
 .out
