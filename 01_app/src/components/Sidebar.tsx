@@ -12,15 +12,9 @@ import {
   Tooltip
 } from '@mui/material';
 import {
-  FlightTakeoff,
-  WbSunny,
   Flight,
   MenuBook,
-  Timeline,
   Logout,
-  Hub,
-  Description,
-  Cloud,
   Brightness4,
   Brightness7
 } from '@mui/icons-material';
@@ -90,14 +84,8 @@ const StyledListItemText = styled(ListItemText)({
 
 
 const menuItems = [
-  { name: 'Plan', icon: Description, path: '/plan' },
-  { name: 'Flights', icon: FlightTakeoff, path: '/flights' },
-  { name: 'Pre-Flight', icon: WbSunny, path: '/pre-flight' },
-  { name: 'In-Flight', icon: Hub, path: '/in-flight' },
-  { name: 'Weather', icon: Cloud, path: '/weather' },
   { name: 'Aircrafts', icon: Flight, path: '/aircrafts' },
   { name: 'Logbook', icon: MenuBook, path: '/logbook' },
-  { name: 'Track Logs', icon: Timeline, path: '/track-logs' },
 ];
 
 export const Sidebar: React.FC = () => {

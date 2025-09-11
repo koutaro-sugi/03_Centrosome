@@ -15,9 +15,8 @@ frontend:
       commands:
         - echo "Frontend pre-build starting"
         - cd 01_app
-        - node --version
-        - npm --version
-        - npm ci --cache .npm --prefer-offline
+        - echo "Node: $(node --version) / npm: $(npm --version)"
+        - npm ci --cache .npm --prefer-offline --no-audit --no-fund
         - echo "Dependencies installed"
     build:
       commands:
