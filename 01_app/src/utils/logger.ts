@@ -44,7 +44,8 @@ const defaultConfig: LoggerConfig = {
   batchSize: 100,
   flushInterval: 5000, // 5秒
   minLevel: process.env.NODE_ENV === 'production' ? LogLevel.INFO : LogLevel.DEBUG,
-  enableCloudWatch: process.env.NODE_ENV === 'production'
+  // 明示フラグがtrueの場合のみ有効化（デフォルト無効）
+  enableCloudWatch: process.env.REACT_APP_ENABLE_CW_LOGS === 'true'
 };
 
 /**
@@ -83,6 +84,9 @@ export class Logger {
       try {
         // CloudWatchクライアントの初期化
         const session = await fetchAuthSession();
+        if (!session.credentials) {
+          throw new Error('Missing AWS credentials for CloudWatch');
+        }
         this.cloudWatchClient = new CloudWatchLogsClient({
           region: process.env.REACT_APP_AWS_REGION || 'us-east-1',
           credentials: session.credentials
