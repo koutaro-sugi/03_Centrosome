@@ -45,14 +45,30 @@ export const flightLogAPI = {
       status: "DRAFT",
     };
 
+    // Debug: show destination table and keys
+    try {
+      console.info('[DDB Put] FlightLog', {
+        table: TABLE_NAME,
+        region: process.env.REACT_APP_AWS_REGION || 'ap-northeast-1',
+        PK: flightLog.PK,
+        SK: flightLog.SK,
+        logId: flightLog.logId,
+      });
+    } catch {}
+
     const command = new PutCommand({
       TableName: TABLE_NAME,
       Item: flightLog,
       ConditionExpression: "attribute_not_exists(PK)",
     });
 
-    await dynamodb.send(command);
-    return flightLog;
+    try {
+      await dynamodb.send(command);
+      return flightLog;
+    } catch (err) {
+      console.error('[DDB Put] Error writing FlightLog', err);
+      throw err;
+    }
   },
 
   // 飛行記録を取得
