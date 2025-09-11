@@ -48,6 +48,8 @@ const useConfigureAmplify = () => {
           throw new Error(`Failed to load amplify_outputs.json: ${res.status}`);
         const outputs = await res.json();
         if (!cancelled) {
+          // cache globally for other modules
+          (window as any).__AMPLIFY_OUTPUTS__ = outputs;
           Amplify.configure(outputs);
           try {
             // どの設定を読んだかの可視化（デバッグ用）
@@ -60,6 +62,21 @@ const useConfigureAmplify = () => {
         }
       } catch (e) {
         console.error("Failed to configure Amplify:", e);
+        // Env fallback for Auth (existing backend scenario)
+        try {
+          const envConfig: any = {
+            Auth: {
+              Cognito: {
+                region: process.env.REACT_APP_AWS_REGION || 'ap-northeast-1',
+                userPoolId: process.env.REACT_APP_USER_POOL_ID,
+                userPoolClientId: process.env.REACT_APP_USER_POOL_CLIENT_ID,
+              },
+            },
+          };
+          Amplify.configure(envConfig);
+        } catch {}
+        // Do not block the UI if outputs are missing; allow app to render with env fallbacks
+        if (!cancelled) setConfigured(true);
       }
     })();
     return () => {
