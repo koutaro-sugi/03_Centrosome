@@ -219,9 +219,7 @@ export const AuthComponent: React.FC = () => {
           <Typography variant="h4" component="h1" gutterBottom>
             Centra
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            フライト管理システム
-          </Typography>
+          {/* subtitle removed as requested */}
         </LogoBox>
 
         <form onSubmit={handleSubmit}>
@@ -299,7 +297,7 @@ export const AuthComponent: React.FC = () => {
           align="center"
           sx={{ marginTop: 3, display: 'block' }}
         >
-          © 2024 Centra. All rights reserved.
+          © 2025 41dev All rights reserved.
         </Typography>
       </StyledPaper>
     </Container>
