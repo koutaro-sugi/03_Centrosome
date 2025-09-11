@@ -28,15 +28,8 @@ import { AuthWrapper } from "./components/AuthWrapperV2";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SecurityProvider } from "./contexts/SecurityContext";
 import { Sidebar } from "./components/Sidebar";
-import { Flights } from "./pages/Flights";
-import { Plan } from "./pages/Plan";
-import { PreFlight } from "./pages/PreFlight";
-import { InFlight } from "./pages/InFlight";
-import { Weather } from "./pages/Weather";
 import { Aircrafts } from "./pages/Aircrafts";
 import { Logbook } from "./pages/Logbook";
-import { TrackLogs } from "./pages/TrackLogs";
-import { Admin } from "./pages/Admin";
 // import { TestDataSetup } from './pages/TestDataSetup'; // コメントアウト：ファイルが存在しない
 import { FlightPlanProvider } from "./contexts/FlightPlanContext";
 import { initializeApp } from "./utils/initializeApp";
@@ -215,19 +208,11 @@ function AppLayout() {
       }}
     >
       {!shouldHideSidebar && <Sidebar />}
-      <Box sx={{ flex: 1, width: "100%" }}>
+      <Box sx={{ flex: 1, width: "100%", minHeight: 0, overflow: 'auto' }}>
         <Routes>
-          <Route path="/" element={<Navigate to="/flights" replace />} />
-          <Route path="/flights" element={<Flights />} />
-          <Route path="/plan" element={<Plan />} />
-          <Route path="/pre-flight" element={<PreFlight />} />
-          <Route path="/in-flight" element={<InFlight />} />
-          <Route path="/weather" element={<Weather />} />
-          <Route path="/aircrafts" element={<Aircrafts />} />
+          <Route path="/" element={<Navigate to="/logbook" replace />} />
           <Route path="/logbook" element={<Logbook />} />
-          <Route path="/track-logs" element={<TrackLogs />} />
-          <Route path="/admin" element={<Admin />} />
-          {/* <Route path="/test-data" element={<TestDataSetup />} /> コメントアウト：コンポーネントが存在しない */}
+          <Route path="/aircrafts" element={<Aircrafts />} />
         </Routes>
       </Box>
     </Box>

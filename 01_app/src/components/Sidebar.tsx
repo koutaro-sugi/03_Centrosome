@@ -7,18 +7,9 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  styled,
-  IconButton,
-  Tooltip
+  styled
 } from '@mui/material';
-import {
-  Flight,
-  MenuBook,
-  Logout,
-  Brightness4,
-  Brightness7
-} from '@mui/icons-material';
-import { useThemeMode } from '../App';
+import { Flight, MenuBook, Logout } from '@mui/icons-material';
 import { LazyImage } from './LazyImage';
 
 const SidebarContainer = styled(Box)(() => ({
@@ -84,14 +75,13 @@ const StyledListItemText = styled(ListItemText)({
 
 
 const menuItems = [
-  { name: 'Aircrafts', icon: Flight, path: '/aircrafts' },
   { name: 'Logbook', icon: MenuBook, path: '/logbook' },
+  { name: 'Aircrafts', icon: Flight, path: '/aircrafts' },
 ];
 
 export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { toggleColorMode, mode } = useThemeMode();
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -107,31 +97,14 @@ export const Sidebar: React.FC = () => {
   return (
     <SidebarContainer>
       {/* Logo Section */}
-      <LogoContainer sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <LogoContainer>
         <LazyImage
-          src="/logo/Centra.svg" 
-          alt="Centrosome"
+          src="/logo/CentraTytFont_logo.svg"
+          alt="Centra"
           height="20px"
           width="auto"
-          style={{ 
-            filter: 'brightness(0) invert(1)'  // SVGを白色に変換
-          }}
+          style={{ filter: 'brightness(0) invert(1)' }}
         />
-        <Tooltip title={mode === 'light' ? 'ダークモードに切り替え' : 'ライトモードに切り替え'}>
-          <IconButton 
-            sx={{ 
-              color: 'white',
-              padding: '4px',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              }
-            }} 
-            onClick={toggleColorMode}
-            size="small"
-          >
-            {mode === 'light' ? <Brightness4 fontSize="small" /> : <Brightness7 fontSize="small" />}
-          </IconButton>
-        </Tooltip>
       </LogoContainer>
 
 

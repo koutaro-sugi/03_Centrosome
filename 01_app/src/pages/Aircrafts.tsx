@@ -179,8 +179,8 @@ export const Aircrafts: React.FC = () => {
   }
 
   return (
-    <Box sx={{ flex: 1, backgroundColor: "#f5f5f5", p: 3 }}>
-      <Container maxWidth="lg">
+    <Box sx={{ flex: 1, backgroundColor: "#f5f5f5", p: 3, overflow: 'auto' }}>
+      <Container maxWidth="lg" sx={{ pb: 4 }}>
         {/* ヘッダー */}
         <Box
           sx={{
