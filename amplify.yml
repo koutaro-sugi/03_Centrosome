@@ -10,7 +10,7 @@ applications:
             - npm ci --prefer-offline --no-audit --no-fund
         build:
           commands:
-            - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --debug
+            - echo "Skipping Gen2 backend deploy (using existing backend)"
             - npm run build
             - ls -la build
       artifacts:
