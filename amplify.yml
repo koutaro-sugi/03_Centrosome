@@ -10,7 +10,15 @@ applications:
             - npm ci --prefer-offline --no-audit --no-fund
         build:
           commands:
-            - echo "Skipping Gen2 backend deploy (using existing backend)"
+            # 1) Deploy Amplify Gen2 backend for this app/branch
+            - echo "Deploying Amplify Gen2 backend (pipeline-deploy)"
+            - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --debug
+            # 2) Generate outputs and expose for frontend at runtime
+            - echo "Generating amplify_outputs.json"
+            - npx ampx generate outputs --app-id $AWS_APP_ID --branch $AWS_BRANCH > amplify_outputs.json
+            - cp amplify_outputs.json public/amplify_outputs.json || true
+            # 3) Build frontend
+            - echo "Building frontend"
             - npm run build
             - ls -la build
       artifacts:
