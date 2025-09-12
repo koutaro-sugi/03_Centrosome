@@ -607,7 +607,8 @@ export const Logbook: React.FC = () => {
         // 非同期で発火し、画面遷移はブロックしない
         fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          // Use a "simple" request to avoid CORS preflight
+          headers: { "Content-Type": "text/plain;charset=UTF-8" },
           body: JSON.stringify({
             flightLog: saved,
             registrationNumber: (saved.registrationNumber || "").trim(),
