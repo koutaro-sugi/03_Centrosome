@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Typography,
@@ -74,8 +74,7 @@ const INSPECTION_ITEMS = [
   },
 ];
 
-// 飛行概要の選択肢
-const FLIGHT_PURPOSES = ["空撮", "監視", "輸送", "テストフライト", "その他"];
+// 飛行概要セレクトは廃止（飛行目的のフリーテキストに集約）
 
 // チェックリスト項目の定義
 const CHECKLIST_ITEMS = [
@@ -131,7 +130,7 @@ const CHECKLIST_ITEMS = [
   { id: "armTakeoff", title: "アーム・離陸 次画面へ", hasCheckbox: false },
 ];
 
-type Screen = "initial" | "inspection" | "checklist" | "flight";
+type Screen = "initial" | "inspection" | "checklist" | "flight" | "postflight" | "summary";
 
 export const Logbook: React.FC = () => {
   // TODO: 実際のユーザーIDを使用
@@ -174,8 +173,7 @@ export const Logbook: React.FC = () => {
   );
 
   // 飛行記録画面の状態
-  const [flightPurpose, setFlightPurpose] = useState<string>("");
-  const [customPurpose, setCustomPurpose] = useState<string>("");
+  // 旧: flightPurpose/customPurpose は廃止（飛行の目的＝フリーテキストへ集約）
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isRecording, setIsRecording] = useState(false);
   const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(
@@ -186,6 +184,44 @@ export const Logbook: React.FC = () => {
   const [checkCompletedTime, setCheckCompletedTime] = useState<Date | null>(
     null
   );
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [specialFlights, setSpecialFlights] = useState<string[]>([]);
+  const [flightPurposeText, setFlightPurposeText] = useState<string>("");
+  const [postFlightChecks, setPostFlightChecks] = useState<Record<string, boolean>>({});
+  const [postFlightNotes, setPostFlightNotes] = useState<string>("");
+  const [sotenProcedures, setSotenProcedures] = useState<{ cameraStop: boolean; screenStop: boolean }>({ cameraStop: false, screenStop: false });
+  const [editLocations, setEditLocations] = useState(false);
+  const [editSpecialFlights, setEditSpecialFlights] = useState(false);
+  const [editPurpose, setEditPurpose] = useState(false);
+  const [originalSpecialFlights, setOriginalSpecialFlights] = useState<string[] | null>(null);
+  const [originalFlightPurposeText, setOriginalFlightPurposeText] = useState<string | null>(null);
+  const [originalTakeoffAddress, setOriginalTakeoffAddress] = useState<string | null>(null);
+  const [originalLandingAddress, setOriginalLandingAddress] = useState<string | null>(null);
+  const [originalTakeoffLocation, setOriginalTakeoffLocation] = useState<any | null>(null);
+  const [originalLandingLocation, setOriginalLandingLocation] = useState<any | null>(null);
+  // サマリーの離陸行の幅を計測して矢印のセンタリングに利用（フォールバックは左寄せ）
+  const takeoffLineRef = useRef<HTMLDivElement | null>(null);
+  const [takeoffLineWidth, setTakeoffLineWidth] = useState<number | null>(null);
+
+  const SPECIAL_FLIGHT_OPTIONS: string[] = [
+    "空港周辺空域",
+    "制限表面",
+    "緊急用務空域",
+    "150ｍ以上",
+    "DID",
+    "夜間",
+    "目視外",
+    "人・物30ｍ",
+    "催し物上空",
+    "危険物",
+    "物件投下",
+  ];
+
+  const isSotenSelected = React.useMemo(() => {
+    const a = aircrafts.find((x) => x.aircraftId === selectedAircraft);
+    const model = (a?.model || "").toUpperCase();
+    return model.includes("SOTEN");
+  }, [aircrafts, selectedAircraft]);
 
   // カバー付きボタンの状態
   const [buttonCoverOpen, setButtonCoverOpen] = useState(false);
@@ -236,6 +272,47 @@ export const Logbook: React.FC = () => {
     };
     fetchData();
   }, [userId]);
+
+  // Guard: 非SOTENでchecklistに入った場合はflightに戻す
+  useEffect(() => {
+    if (currentScreen === 'checklist' && !isSotenSelected) {
+      setCurrentScreen('flight');
+    }
+  }, [currentScreen, isSotenSelected]);
+
+  // Summary originals snapshot for change highlighting
+  useEffect(() => {
+    if (currentScreen === 'summary') {
+      if (originalSpecialFlights === null) setOriginalSpecialFlights([...specialFlights]);
+      if (originalFlightPurposeText === null) setOriginalFlightPurposeText(flightPurposeText || '');
+      if (originalTakeoffAddress === null) setOriginalTakeoffAddress(takeoffLocation?.address || '');
+      if (originalLandingAddress === null) setOriginalLandingAddress(landingLocation?.address || '');
+      if (originalTakeoffLocation === null) setOriginalTakeoffLocation(takeoffLocation ? { ...takeoffLocation } : null);
+      if (originalLandingLocation === null) setOriginalLandingLocation(landingLocation ? { ...landingLocation } : null);
+      // 幅計測
+      const measure = () => {
+        if (takeoffLineRef.current) {
+          setTakeoffLineWidth(takeoffLineRef.current.offsetWidth);
+        }
+      };
+      // 少し遅延させてレイアウト確定後に計測
+      setTimeout(measure, 0);
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    } else {
+      setEditLocations(false);
+      setEditSpecialFlights(false);
+      setEditPurpose(false);
+      if (originalSpecialFlights !== null) setOriginalSpecialFlights(null);
+      if (originalFlightPurposeText !== null) setOriginalFlightPurposeText(null);
+      if (originalTakeoffAddress !== null) setOriginalTakeoffAddress(null);
+      if (originalLandingAddress !== null) setOriginalLandingAddress(null);
+      if (originalTakeoffLocation !== null) setOriginalTakeoffLocation(null);
+      if (originalLandingLocation !== null) setOriginalLandingLocation(null);
+      setTakeoffLineWidth(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentScreen]);
 
   // 日の出・日没時刻の計算
   const calculateSunTimes = (date: Date, lat: number, lon: number) => {
@@ -342,7 +419,8 @@ export const Logbook: React.FC = () => {
       setError("全ての点検項目をチェックしてください");
       return;
     }
-    setCurrentScreen("checklist");
+    // SOTENシリーズのみチェックリスト画面へ、それ以外は飛行開始へスキップ
+    setCurrentScreen(isSotenSelected ? "checklist" : "flight");
   };
 
   // 飛行開始画面へ進む
@@ -390,6 +468,58 @@ export const Logbook: React.FC = () => {
   // 記録停止の確認
   const handleStopConfirm = async () => {
     try {
+      // 記録停止 → ポストフライトへ（保存はまだ行わない）
+      setIsRecording(false);
+      setShowStopConfirm(false);
+      // プリフライトのチェックは毎回クリア
+      setChecklistItems({});
+      setCurrentScreen("postflight");
+      return;
+    } catch (error) {
+      console.error("Failed to stop recording:", error);
+    }
+  };
+
+  // 全入力リセットして初期画面へ
+  const resetAllAndGoHome = () => {
+    setSelectedAircraft("");
+    setSelectedPilot("");
+    setDipsApplied(false);
+    setPreviousAircraft("");
+    setTakeoffLocation(null);
+    setLandingLocation(null);
+    setSameLocation(false);
+    setInspectionChecks({});
+    setInspectionNotes({});
+    setEditingNote(null);
+    setChecklistItems({});
+    setFlightPurposeText("");
+    setSpecialFlights([]);
+    setPostFlightChecks({});
+    setSotenProcedures({ cameraStop: false, screenStop: false });
+    setButtonCoverOpen(false);
+    setIsRecording(false);
+    setRecordingStartTime(null);
+    setRecordingTime(0);
+    setShowStopConfirm(false);
+    setShowCompleteConfirm(false);
+    setCheckCompletedTime(null);
+    setError(null);
+    setEditLocations(false);
+    setEditSpecialFlights(false);
+    setEditPurpose(false);
+    setOriginalSpecialFlights(null);
+    setOriginalFlightPurposeText(null);
+    setOriginalTakeoffAddress(null);
+    setOriginalLandingAddress(null);
+    setOriginalTakeoffLocation(null);
+    setOriginalLandingLocation(null);
+    setCurrentScreen("initial");
+  };
+
+  // フライト保存とホームへ戻る
+  const handleSaveAndReturnHome = async () => {
+    try {
       // パイロットと機体の情報を取得
       const pilot = pilots.find((p) => p.pilotId === selectedPilot);
       const aircraft = aircrafts.find((a) => a.aircraftId === selectedAircraft);
@@ -410,7 +540,7 @@ export const Logbook: React.FC = () => {
           .split(" ")[0]
           .replace(/:/g, "")
           .substring(0, 4),
-        flightTypes: dipsApplied ? ["DIPS"] : [],
+        flightType: specialFlights && specialFlights.length ? specialFlights : undefined,
         timeBeforeEngine: checkCompletedTime
           ? Math.floor(
               (recordingStartTime!.getTime() - checkCompletedTime.getTime()) /
@@ -450,8 +580,7 @@ export const Logbook: React.FC = () => {
         takeoffTime: toJSTISOString(recordingStartTime!),
         landingTime: toJSTISOString(new Date()),
         flightDuration: Math.floor(recordingTime / 60),
-        flightPurpose:
-          flightPurpose === "other" ? customPurpose : flightPurpose,
+        flightPurpose: flightPurposeText,
         remarks: "",
       };
 
@@ -460,22 +589,19 @@ export const Logbook: React.FC = () => {
 
       // Google Sheetsへの書き込み
       try {
-        const outputsRes = await fetch("/amplify_outputs.json", {
-          cache: "no-store",
-        });
-        if (!outputsRes.ok) {
-          throw new Error("amplify_outputs.json の取得に失敗しました");
-        }
-        const outputs = await outputsRes.json();
-        const url: string | undefined = outputs?.custom?.logbookToSheetsUrl;
-        if (!url) {
-          throw new Error(
-            "logbookToSheetsUrl がamplify_outputs.jsonに存在しません"
-          );
-        }
-
-        // 親フォルダIDは /amplify_outputs.json の custom.parentFolderId から取得
-        const parentFolderId = outputs?.custom?.parentFolderId || undefined;
+        // まず outputs を試し、なければ環境変数フォールバック
+        let url: string | undefined;
+        let parentFolderId: string | undefined;
+        try {
+          const outputsRes = await fetch("/amplify_outputs.json", { cache: "no-store" });
+          if (outputsRes.ok) {
+            const outputs = await outputsRes.json();
+            url = outputs?.custom?.logbookToSheetsUrl;
+            parentFolderId = outputs?.custom?.parentFolderId || undefined;
+          }
+        } catch {}
+        if (!url) url = process.env.REACT_APP_LOGBOOK_TO_SHEETS_URL;
+        if (!url) throw new Error("logbookToSheetsUrl 未設定（outputs/env）");
 
         // 非同期で発火し、画面遷移はブロックしない
         fetch(url, {
@@ -505,10 +631,8 @@ export const Logbook: React.FC = () => {
         // UIブロックしないため、ここではアラートを出さない
       }
 
-      setIsRecording(false);
-      setShowStopConfirm(false);
-      // 初期画面に戻る（同期はバックグラウンド継続）
-      setCurrentScreen("initial");
+      // 初期化とホームへ戻る
+      resetAllAndGoHome();
     } catch (error) {
       console.error("Failed to save flight record:", error);
       alert("飛行記録の保存に失敗しました");
@@ -525,7 +649,7 @@ export const Logbook: React.FC = () => {
 
   // スマホ用のスタイル
   const mobileContainer = {
-    height: "100vh",
+    height: "100dvh",
     width: "100%",
     display: "flex",
     flexDirection: "column",
@@ -1123,13 +1247,7 @@ export const Logbook: React.FC = () => {
           </Stack>
         </Box>
 
-        <Box
-          sx={{
-            p: 2,
-            backgroundColor: "#fff",
-            boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
-          }}
-        >
+        <Box sx={{ p: 2, backgroundColor: '#fff', boxShadow: '0 -2px 4px rgba(0,0,0,0.1)', position: 'sticky', bottom: 0, pb: 'calc(16px + env(safe-area-inset-bottom))' }}>
           <Button
             fullWidth
             variant="contained"
@@ -1273,6 +1391,241 @@ export const Logbook: React.FC = () => {
     );
   }
 
+  // ポストフライト画面（SOTEN手順 + 点検）
+  if (currentScreen === "postflight") {
+    const POST_CHECKS = [
+      { id: 'clean', label: '機体にゴミ等の付着はないか' },
+      { id: 'mount', label: '各機器は確実に取り付けられているか（ネジ等の脱落やゆるみ等）' },
+      { id: 'damage', label: '機体（プロペラ、フレーム等）に損傷やゆがみはないか' },
+      { id: 'heat', label: '各機器の異常な発熱はないか' },
+    ];
+    const postChecklistAll = POST_CHECKS.every((c) => postFlightChecks[c.id]);
+    const sotenOK = !isSotenSelected || (sotenProcedures.cameraStop && sotenProcedures.screenStop);
+    const remarksRequired = !postChecklistAll;
+    const canComplete = sotenOK && (postChecklistAll || postFlightNotes.trim().length > 0);
+    return (
+      <Box sx={mobileContainer}>
+        <Box sx={{ p: 2, bgcolor: '#fff', boxShadow: 1 }}>
+          <Typography variant="h6" fontWeight="bold" align="center">
+            ポストフライト
+          </Typography>
+        </Box>
+        <Box sx={{ p: 2, flex: 1, overflow: 'auto' }}>
+          {isSotenSelected && (
+            <Paper sx={{ p: 2, mb: 2, borderLeft: '4px solid #1976d2' }}>
+              <Typography variant="subtitle1" fontWeight="bold">SOTENプロシージャー</Typography>
+              <Stack>
+                <FormControlLabel control={<Checkbox checked={sotenProcedures.cameraStop} onChange={(e)=>setSotenProcedures(p=>({...p,cameraStop:e.target.checked}))} />} label="カメラ録画停止" />
+                <FormControlLabel control={<Checkbox checked={sotenProcedures.screenStop} onChange={(e)=>setSotenProcedures(p=>({...p,screenStop:e.target.checked}))} />} label="スクリーンキャプチャ停止" />
+              </Stack>
+            </Paper>
+          )}
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+              飛行後点検
+            </Typography>
+            <Stack>
+              {POST_CHECKS.map((item) => (
+                <FormControlLabel
+                  key={item.id}
+                  control={
+                    <Checkbox
+                      checked={!!postFlightChecks[item.id]}
+                      onChange={(e) =>
+                        setPostFlightChecks({ ...postFlightChecks, [item.id]: e.target.checked })
+                      }
+                    />
+                  }
+                  label={item.label}
+                />
+              ))}
+            </Stack>
+            <TextField
+              fullWidth
+              multiline
+              minRows={2}
+              sx={{ mt: 2 }}
+              label={remarksRequired ? '特記事項（未チェック項目がある場合は必須）' : '特記事項'}
+              value={postFlightNotes}
+              onChange={(e)=>setPostFlightNotes(e.target.value)}
+              error={remarksRequired && postFlightNotes.trim().length === 0}
+              helperText={remarksRequired && postFlightNotes.trim().length === 0 ? '未チェック項目があるため、特記事項を記入してください' : undefined}
+            />
+          </Paper>
+        </Box>
+        <Box sx={{ p: 2, bgcolor: '#fff', boxShadow: '0 -2px 4px rgba(0,0,0,0.1)', position: 'sticky', bottom: 0, pb: 'calc(16px + env(safe-area-inset-bottom))' }}>
+          <Button fullWidth variant="contained" size="large" onClick={()=>setShowCompleteConfirm(true)} disabled={!canComplete}>フライト完了</Button>
+        </Box>
+        <Dialog open={showCompleteConfirm} onClose={()=>setShowCompleteConfirm(false)} maxWidth="xs" fullWidth>
+          <DialogContent>
+            <Stack spacing={2}>
+              <Typography variant="h6" align="center">フライト完了</Typography>
+              <Typography variant="body2" align="center" color="text.secondary">点検が完了していればスライドしてください</Typography>
+              <SlideToConfirm
+                onConfirm={() => {
+                  if (!canComplete) {
+                    setError('SOTENプロシージャーおよび飛行後点検の要件を満たしてください');
+                    return;
+                  }
+                  setError(null);
+                  setShowCompleteConfirm(false);
+                  setCurrentScreen('summary');
+                }}
+                text="スライドしてフライト完了"
+              />
+            </Stack>
+          </DialogContent>
+        </Dialog>
+      </Box>
+    );
+  }
+
+  // フライト概要（サマリー）
+  if (currentScreen === "summary") {
+    return (
+      <Box sx={mobileContainer}>
+        <Box sx={{ p: 2, bgcolor: '#fff', boxShadow: 1 }}>
+          <Typography variant="h6" fontWeight="bold" align="center">フライト概要</Typography>
+        </Box>
+        <Box sx={{ p: 2, flex: 1, overflow: 'auto' }}>
+          <Stack spacing={1.5}>
+            <Paper sx={{ p: 1.5, position: 'relative', border: editLocations ? '2px solid' : undefined, borderColor: editLocations ? 'primary.main' : undefined }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                <Typography variant="subtitle2" color="text.secondary">飛行場所</Typography>
+                <IconButton size="small" onClick={()=>setEditLocations(v=>!v)} aria-label="編集"><EditIcon fontSize="small" /></IconButton>
+              </Stack>
+              <Stack spacing={0.5}>
+                <Box ref={takeoffLineRef} sx={{ display: 'inline-block' }}>
+                  <Typography variant="body2">離陸場所：{takeoffLocation ? extractPlaceName(takeoffLocation.address) : '未選択'}</Typography>
+                </Box>
+                <Box sx={{ width: takeoffLineWidth ? `${takeoffLineWidth}px` : 'auto', textAlign: takeoffLineWidth ? 'center' : 'left' }}>
+                  <Typography variant="body2">↓</Typography>
+                </Box>
+                <Typography variant="body2">着陸場所：{landingLocation ? extractPlaceName(landingLocation.address) : '未選択'}</Typography>
+              </Stack>
+              {editLocations && (
+                <>
+                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                    <IconButton size="small" onClick={() => setShowSimpleLocationPicker('takeoff')}><EditIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => setShowSimpleLocationPicker('landing')}><EditIcon fontSize="small" /></IconButton>
+                  </Stack>
+                  <Box sx={{ position: 'absolute', right: 8, bottom: 8, display: 'flex', gap: 1 }}>
+                    <Button size="small" variant="outlined" onClick={() => {
+                      setTakeoffLocation(originalTakeoffLocation);
+                      setLandingLocation(originalLandingLocation);
+                      setEditLocations(false);
+                    }}>キャンセル</Button>
+                    <Button size="small" variant="contained" onClick={() => {
+                      setOriginalTakeoffLocation(takeoffLocation ? { ...takeoffLocation } : null);
+                      setOriginalLandingLocation(landingLocation ? { ...landingLocation } : null);
+                      setOriginalTakeoffAddress(takeoffLocation?.address || '');
+                      setOriginalLandingAddress(landingLocation?.address || '');
+                      setEditLocations(false);
+                    }}>保存</Button>
+                  </Box>
+                </>
+              )}
+            </Paper>
+
+            <Paper sx={{ p: 1.5, position: 'relative', border: editSpecialFlights ? '2px solid' : undefined, borderColor: editSpecialFlights ? 'primary.main' : undefined }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>飛行時間</Typography>
+              <Typography variant="body1">{formatTime(recordingTime)}</Typography>
+            </Paper>
+
+            <Paper sx={{ p: 1.5 }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                <Typography variant="subtitle2" color="text.secondary">特定飛行</Typography>
+                <IconButton size="small" onClick={()=>setEditSpecialFlights(v=>!v)} aria-label="編集"><EditIcon fontSize="small" /></IconButton>
+              </Stack>
+              <Stack>
+                {SPECIAL_FLIGHT_OPTIONS.map((label) => {
+                  const changed = originalSpecialFlights ? (originalSpecialFlights.includes(label) !== specialFlights.includes(label)) : false;
+                  return (
+                    <FormControlLabel
+                      key={label}
+                      control={
+                        <Checkbox
+                          checked={specialFlights.includes(label)}
+                          onChange={(e) => {
+                            if (!editSpecialFlights) return;
+                            setSpecialFlights((prev) => e.target.checked ? [...prev, label] : prev.filter((v) => v !== label));
+                          }}
+                          sx={changed ? { color: 'warning.main', '&.Mui-checked': { color: 'warning.main' } } : undefined}
+                        />
+                      }
+                      label={label}
+                      sx={changed ? { color: 'warning.main' } : undefined}
+                    />
+                  );
+                })}
+              </Stack>
+              {specialFlights.length === 0 && (
+                <Typography variant="caption" color="text.secondary">該当しない</Typography>
+              )}
+              {editSpecialFlights && (
+                <Box sx={{ position: 'absolute', right: 8, bottom: 8, display: 'flex', gap: 1 }}>
+                  <Button size="small" variant="outlined" onClick={() => {
+                    if (originalSpecialFlights) setSpecialFlights([...originalSpecialFlights]);
+                    setEditSpecialFlights(false);
+                  }}>キャンセル</Button>
+                  <Button size="small" variant="contained" onClick={() => {
+                    setOriginalSpecialFlights([...specialFlights]);
+                    setEditSpecialFlights(false);
+                  }}>保存</Button>
+                </Box>
+              )}
+            </Paper>
+
+            <Paper sx={{ p: 1.5, position: 'relative', border: editPurpose ? '2px solid' : undefined, borderColor: editPurpose ? 'primary.main' : undefined }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                <Typography variant="subtitle2" color="text.secondary">飛行目的</Typography>
+                <IconButton size="small" onClick={()=>setEditPurpose(v=>!v)} aria-label="編集"><EditIcon fontSize="small" /></IconButton>
+              </Stack>
+              <TextField
+                fullWidth
+                value={flightPurposeText}
+                onChange={(e) => setFlightPurposeText(e.target.value)}
+                InputProps={{ readOnly: !editPurpose }}
+                sx={
+                  originalFlightPurposeText !== null && flightPurposeText !== originalFlightPurposeText
+                    ? { '& .MuiOutlinedInput-root fieldset': { borderColor: 'warning.main' } }
+                    : undefined
+                }
+              />
+              {editPurpose && (
+                <Box sx={{ position: 'absolute', right: 8, bottom: 8, display: 'flex', gap: 1 }}>
+                  <Button size="small" variant="outlined" onClick={() => {
+                    if (originalFlightPurposeText !== null) setFlightPurposeText(originalFlightPurposeText);
+                    setEditPurpose(false);
+                  }}>キャンセル</Button>
+                  <Button size="small" variant="contained" onClick={() => {
+                    setOriginalFlightPurposeText(flightPurposeText || '');
+                    setEditPurpose(false);
+                  }}>保存</Button>
+                </Box>
+              )}
+            </Paper>
+          </Stack>
+        </Box>
+        {(() => {
+          const hasSummaryEdits = !!(
+            (originalSpecialFlights && (originalSpecialFlights.length !== specialFlights.length || originalSpecialFlights.some(v=>!specialFlights.includes(v)))) ||
+            (originalFlightPurposeText !== null && originalFlightPurposeText !== (flightPurposeText || '')) ||
+            (originalTakeoffAddress !== null && originalTakeoffAddress !== (takeoffLocation?.address || '')) ||
+            (originalLandingAddress !== null && originalLandingAddress !== (landingLocation?.address || ''))
+          );
+          return (
+            <Box sx={{ p: 2, bgcolor: '#fff', boxShadow: '0 -2px 4px rgba(0,0,0,0.1)', position: 'sticky', bottom: 0, pb: 'calc(16px + env(safe-area-inset-bottom))' }}>
+              <Button fullWidth variant="contained" size="large" onClick={handleSaveAndReturnHome}>
+                {hasSummaryEdits ? '修正内容を保存してホームに戻る' : 'ホームに戻る'}
+              </Button>
+            </Box>
+          );
+        })()}
+      </Box>
+    );
+  }
+
   // 飛行開始画面
   return (
     <Box sx={mobileContainer}>
@@ -1339,6 +1692,46 @@ export const Logbook: React.FC = () => {
             </Typography>
           </Paper>
 
+          {/* 特定飛行の種類（複数選択） */}
+          <Paper sx={{ p: 1.5 }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
+              特定飛行
+            </Typography>
+            <Stack spacing={0.5}>
+              {SPECIAL_FLIGHT_OPTIONS.map((label) => (
+                <FormControlLabel
+                  key={label}
+                  control={
+                    <Checkbox
+                      checked={specialFlights.includes(label)}
+                      onChange={(e) => {
+                        setSpecialFlights((prev) =>
+                          e.target.checked
+                            ? [...prev, label]
+                            : prev.filter((v) => v !== label)
+                        );
+                      }}
+                    />
+                  }
+                  label={label}
+                />
+              ))}
+            </Stack>
+          </Paper>
+
+          {/* 飛行の目的（フリーテキスト） */}
+          <Paper sx={{ p: 1.5 }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
+              飛行の目的
+            </Typography>
+            <TextField
+              fullWidth
+              placeholder="例: 橋梁点検"
+              value={flightPurposeText}
+              onChange={(e) => setFlightPurposeText(e.target.value)}
+            />
+          </Paper>
+
           <Paper sx={{ p: 1.5 }}>
             <Typography
               variant="subtitle2"
@@ -1380,50 +1773,14 @@ export const Logbook: React.FC = () => {
             </Stack>
           </Paper>
 
-          <FormControl
-            fullWidth
-            error={!flightPurpose}
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                "&.Mui-error": {
-                  backgroundColor: "#ffebee",
-                  "& fieldset": {
-                    borderColor: "error.main",
-                    borderWidth: 2,
-                  },
-                },
-              },
-            }}
-          >
-            <InputLabel>飛行概要 {!flightPurpose && "(必須)"}</InputLabel>
-            <Select
-              value={flightPurpose}
-              onChange={(e) => setFlightPurpose(e.target.value)}
-              label={`飛行概要${!flightPurpose ? " (必須)" : ""}`}
-            >
-              {FLIGHT_PURPOSES.map((purpose) => (
-                <MenuItem key={purpose} value={purpose}>
-                  {purpose}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {flightPurpose === "その他" && (
-            <TextField
-              fullWidth
-              label="飛行概要（その他）"
-              value={customPurpose}
-              onChange={(e) => setCustomPurpose(e.target.value)}
-            />
-          )}
+          {/* 飛行概要セレクトは廃止（飛行目的のフリーテキストに集約） */}
 
           <Paper sx={{ p: 2, textAlign: "center", backgroundColor: "#f5f5f5" }}>
-            <Typography variant="h3" fontWeight="300">
-              {currentTime.toLocaleTimeString("ja-JP", { hour12: false })}
-            </Typography>
             <Typography variant="caption" color="text.secondary">
               現在時刻
+            </Typography>
+            <Typography variant="h3" fontWeight="300">
+              {currentTime.toLocaleTimeString("ja-JP", { hour12: false })}
             </Typography>
 
             {/* 日の出・日没情報 */}
@@ -1489,13 +1846,7 @@ export const Logbook: React.FC = () => {
         </Stack>
       </Box>
 
-      <Box
-        sx={{
-          p: 2,
-          backgroundColor: "#fff",
-          boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
-        }}
-      >
+      <Box sx={{ p: 2, backgroundColor: '#fff', boxShadow: '0 -2px 4px rgba(0,0,0,0.1)', position: 'sticky', bottom: 0, pb: 'calc(16px + env(safe-area-inset-bottom))' }}>
         <Box sx={{ position: "relative" }}>
           {!isRecording && (
             <Button
@@ -1503,9 +1854,7 @@ export const Logbook: React.FC = () => {
               variant={buttonCoverOpen ? "contained" : "outlined"}
               size="large"
               onClick={() => setButtonCoverOpen(!buttonCoverOpen)}
-              disabled={
-                !flightPurpose || (flightPurpose === "その他" && !customPurpose)
-              }
+              disabled={flightPurposeText.trim().length === 0}
               sx={{
                 py: 3,
                 fontSize: "1.2rem",
@@ -1574,7 +1923,7 @@ export const Logbook: React.FC = () => {
               記録を終了
             </Typography>
             <Typography variant="body2" align="center" color="text.secondary">
-              飛行記録を保存して終了しますか？
+              記録を停止します。次にポストフライト点検を実施します。
             </Typography>
             <Box sx={{ px: 2 }}>
               <SlideToConfirm
@@ -1582,7 +1931,7 @@ export const Logbook: React.FC = () => {
                   handleStopConfirm();
                   setShowStopConfirm(false);
                 }}
-                text="スライドして終了"
+                text="スライドして停止"
               />
             </Box>
             <Typography

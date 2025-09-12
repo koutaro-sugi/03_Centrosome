@@ -195,6 +195,30 @@ async function duplicateTemplateAs(
   });
 }
 
+// Ensure spreadsheet uses JST and Japanese locale
+async function ensureSpreadsheetSettings(sheets: any, spreadsheetId: string) {
+  try {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            updateSpreadsheetProperties: {
+              properties: {
+                timeZone: "Asia/Tokyo",
+                locale: "ja_JP",
+              },
+              fields: "timeZone,locale",
+            },
+          },
+        ],
+      },
+    });
+  } catch (_e) {
+    // non-fatal; proceed even if settings update fails
+  }
+}
+
 async function findNextRow(
   sheets: any,
   spreadsheetId: string,
@@ -241,25 +265,41 @@ async function findOrCreateTargetSheet(
 }
 
 function buildRow(flightLog: any): {
-  date: string;
+  date: string; // formula or string
   pilotName: string;
   summary: string;
   from: string;
   to: string;
-  off: string;
-  on: string;
+  off: string; // formula or string
+  on: string;  // formula or string
   safety: string;
 } {
+  // Prefer DATE()/TIME() formulas for reliable calc in sheets
+  const ymd = (flightLog.flightDate
+    ? flightLog.flightDate
+    : toJstYmd(flightLog.flightStartTime)) as string | undefined;
+  let dateFormula = "";
+  if (ymd) {
+    const [y, m, d] = ymd.split("-").map((v: string) => parseInt(v, 10));
+    if (y && m && d) dateFormula = `=DATE(${y},${m},${d})`;
+  }
+
+  function toTimeFormula(iso?: string): string {
+    if (!iso) return "";
+    const hhmm = toJstHHmm(iso); // "HH:mm"
+    const [h, mm] = hhmm.split(":").map((v) => parseInt(v, 10));
+    if (Number.isFinite(h) && Number.isFinite(mm)) return `=TIME(${h},${mm},0)`;
+    return "";
+  }
+
   return {
-    date: flightLog.flightDate
-      ? flightLog.flightDate
-      : toJstYmd(flightLog.flightStartTime),
+    date: dateFormula || (ymd ?? ""),
     pilotName: flightLog.pilotName || "",
     summary: flightLog.flightPurpose || flightLog.remarks || "",
     from: flightLog.takeoffLocation?.name || "",
     to: flightLog.landingLocation?.name || "",
-    off: flightLog.flightStartTime ? toJstHHmm(flightLog.flightStartTime) : "",
-    on: flightLog.flightEndTime ? toJstHHmm(flightLog.flightEndTime) : "",
+    off: toTimeFormula(flightLog.flightStartTime),
+    on: toTimeFormula(flightLog.flightEndTime),
     safety: flightLog.safety || "",
   };
 }
@@ -315,6 +355,8 @@ export const handler = async (
         title,
         parentFolderIdOverride
       );
+      // Set timezone/locale for new spreadsheets
+      await ensureSpreadsheetSettings(sheets, spreadsheetId);
       await putMappedSpreadsheetId(
         ddb,
         tableName,
@@ -322,6 +364,8 @@ export const handler = async (
         spreadsheetId
       );
     }
+    // Also enforce settings when reusing an existing sheet (idempotent)
+    await ensureSpreadsheetSettings(sheets, spreadsheetId);
 
     const ymd = flightLog.flightDate
       ? flightLog.flightDate.replace(/-/g, "")
