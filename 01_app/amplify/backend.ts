@@ -33,14 +33,12 @@ const region = stack.region;
 const accountId = stack.account;
 
 // DynamoDB table for UAS logbook spreadsheet mapping
-const uasLogbookSheetsTable = new dynamodb.Table(stack, "UASLogbookSheets", {
-  partitionKey: {
-    name: "registrationNumber",
-    type: dynamodb.AttributeType.STRING,
-  },
-  billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-  tableName: "UASLogbookSheets",
-});
+// Use existing table if present to avoid name collision across stacks
+const uasLogbookSheetsTable = dynamodb.Table.fromTableName(
+  stack,
+  "UASLogbookSheets",
+  "UASLogbookSheets"
+);
 
 // Grant logbook-to-sheets function access to the table
 backend.logbookToSheets.resources.lambda.addToRolePolicy(
@@ -72,7 +70,7 @@ backend.logbookToSheets.resources.lambda.addEnvironment(
 );
 backend.logbookToSheets.resources.lambda.addEnvironment(
   "UAS_LOGBOOK_TABLE",
-  uasLogbookSheetsTable.tableName
+  "UASLogbookSheets"
 );
 backend.logbookToSheets.resources.lambda.addEnvironment(
   "DRIVE_FOLDER_ID",
