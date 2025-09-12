@@ -307,6 +307,15 @@ function buildRow(flightLog: any): {
 export const handler = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> => {
+  // Handle CORS preflight early
+  const method = event?.requestContext?.http?.method || "";
+  if (method === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers: corsHeaders(),
+      body: "",
+    };
+  }
   try {
     const body = event.body ? JSON.parse(event.body) : {};
     const flightLog = body.flightLog || {};
@@ -423,5 +432,13 @@ export const handler = async (
 function corsHeaders() {
   return {
     "Content-Type": "application/json",
+    // Allow all origins or restrict to your domains
+    "Access-Control-Allow-Origin": "*",
+    // Allow typical headers used by fetch
+    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Requested-With",
+    // Allow required methods
+    "Access-Control-Allow-Methods": "OPTIONS,POST",
+    // Cache preflight
+    "Access-Control-Max-Age": "86400",
   };
 }
