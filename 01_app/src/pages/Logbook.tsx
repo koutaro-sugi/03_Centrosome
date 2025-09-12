@@ -575,10 +575,11 @@ export const Logbook: React.FC = () => {
               uasportCode: landingLocation.uasportCode,
             }
           : undefined,
-        flightStartTime: toJSTISOString(recordingStartTime!),
-        flightEndTime: toJSTISOString(new Date()),
-        takeoffTime: toJSTISOString(recordingStartTime!),
-        landingTime: toJSTISOString(new Date()),
+        // Send canonical UTC ISO strings; backend converts to JST
+        flightStartTime: recordingStartTime!.toISOString(),
+        flightEndTime: new Date().toISOString(),
+        takeoffTime: recordingStartTime!.toISOString(),
+        landingTime: new Date().toISOString(),
         flightDuration: Math.floor(recordingTime / 60),
         flightPurpose: flightPurposeText,
         remarks: "",
