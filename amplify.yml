@@ -13,9 +13,17 @@ applications:
             # 1) Deploy Amplify Gen2 backend for this app/branch
             - echo "Deploying Amplify Gen2 backend (pipeline-deploy)"
             - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --debug
-            # 2) Generate outputs and expose for frontend at runtime
-            - echo "Generating amplify_outputs.json"
-            - npx ampx generate outputs --app-id $AWS_APP_ID --branch $AWS_BRANCH > amplify_outputs.json
+            # 2) Generate outputs and expose for frontend at runtime (via CloudFormation)
+            - echo "Generating amplify_outputs.json via CloudFormation outputs"
+            - |
+              set -e
+              REGION=${AWS_REGION:-ap-northeast-1}
+              STACK_NAME=$(aws cloudformation list-stacks --region "$REGION" \
+                --query "reverse(sort_by(StackSummaries[?starts_with(StackName, 'amplify-${AWS_APP_ID}-${AWS_BRANCH}') && (StackStatus=='CREATE_COMPLETE' || StackStatus=='UPDATE_COMPLETE')], &CreationTime))[:1].StackName" \
+                --output text)
+              echo "Resolved stack: ${STACK_NAME}"
+              OUTPUTS_JSON=$(aws cloudformation describe-stacks --region "$REGION" --stack-name "$STACK_NAME" --query 'Stacks[0].Outputs' --output json)
+              node -e "const outs=process.env.OUTPUTS?JSON.parse(process.env.OUTPUTS):[]; const o=outs.find(x=>x.OutputKey==='customOutputs'); let v={}; if(o){try{v=JSON.parse(o.OutputValue)}catch(e){v={}}} console.log(JSON.stringify(v));" > amplify_outputs.json
             - cp amplify_outputs.json public/amplify_outputs.json || true
             # 3) Build frontend
             - echo "Building frontend"
