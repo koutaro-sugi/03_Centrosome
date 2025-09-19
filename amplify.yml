@@ -13,13 +13,13 @@ applications:
             # 1) Generate amplify_outputs.json with fixed User Pool FIRST
             - echo "Generating amplify_outputs.json with fixed User Pool"
             - |
-              # Create amplify_outputs.json with fixed centra-weather-userpool-CentraV2
+              # Create amplify_outputs.json with CORRECT centra-weather-userpool-CentraV2
               echo '{
                 "auth": {
                   "user_pool_id": "ap-northeast-1_0hkVfrsxW",
                   "aws_region": "ap-northeast-1",
-                  "user_pool_client_id": "4ui2d4ju3gb8hc7eo7drfbesfq",
-                  "identity_pool_id": "ap-northeast-1:9325a861-9a3f-4684-8240-663790b26cd7",
+                  "user_pool_client_id": "1nujebcepnbq46b71vml7sef2o",
+                  "identity_pool_id": "ap-northeast-1:73cceaa7-49dd-42a5-9bd8-92907217f2e9",
                   "mfa_methods": [],
                   "standard_required_attributes": ["email"],
                   "username_attributes": ["email"],
@@ -60,10 +60,7 @@ applications:
               cat amplify_outputs.json | head -20
               echo "File size: $(wc -c < amplify_outputs.json) bytes"
             - cp amplify_outputs.json public/amplify_outputs.json
-            # 2) Deploy Amplify Gen2 backend for this app/branch
-            - echo "Deploying Amplify Gen2 backend (pipeline-deploy)"
-            - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --debug
-            # 3) Build frontend
+            # 2) Build frontend (using existing backend resources)
             - echo "Building frontend"
             - npm run build
             - ls -la build

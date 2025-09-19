@@ -11,6 +11,7 @@ import { nowJST, toJSTDateString } from "../utils/dateTime";
 
 // デバッグログは開発環境のみ
 if (process.env.NODE_ENV === "development") {
+  // eslint-disable-next-line no-console
   console.log("AWS Config:", {
     region: process.env.REACT_APP_AWS_REGION,
     accessKeyId:
@@ -70,7 +71,7 @@ export const createDynamoDBDocumentClient = async () => {
 
 // 後方互換性のためのエクスポート
 export const dynamodb = {
-  send: async (command: any) => {
+  send: async (command: any): Promise<any> => {
     const docClient = await createDynamoDBDocumentClient();
     return docClient.send(command);
   }
@@ -88,7 +89,7 @@ const getCachedClient = async () => {
 
 // 既存のコードとの互換性を保つため、dynamodbを直接使用可能にする
 export const dynamodbSync = {
-  send: async (command: any) => {
+  send: async (command: any): Promise<any> => {
     const client = await getCachedClient();
     return client.send(command);
   }
