@@ -13,59 +13,69 @@ applications:
             # 1) Deploy Amplify Gen2 backend for this app/branch
             - echo "Deploying Amplify Gen2 backend (pipeline-deploy)"
             - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --debug
-            # 2) Generate outputs and expose for frontend at runtime (via CloudFormation)
-            - echo "Generating amplify_outputs.json via CloudFormation outputs"
+            # 2) Use existing amplify_outputs.json or generate new one
+            - echo "Checking for existing amplify_outputs.json"
             - |
-              set -e
-              REGION=${AWS_REGION:-ap-northeast-1}
-              STACK_NAME=$(aws cloudformation list-stacks --region "$REGION" \
-                --query "reverse(sort_by(StackSummaries[?starts_with(StackName, 'amplify-${AWS_APP_ID}-${AWS_BRANCH}') && (StackStatus=='CREATE_COMPLETE' || StackStatus=='UPDATE_COMPLETE')], &CreationTime))[:1].StackName" \
-                --output text)
-              echo "Resolved stack: ${STACK_NAME}"
-              OUTPUTS_JSON=$(aws cloudformation describe-stacks --region "$REGION" --stack-name "$STACK_NAME" --query 'Stacks[0].Outputs' --output json)
-              echo "CloudFormation outputs: ${OUTPUTS_JSON}"
-              # Generate complete amplify_outputs.json with all outputs
-              node -e "
-                const outputs = process.env.OUTPUTS_JSON ? JSON.parse(process.env.OUTPUTS_JSON) : [];
-                console.log('Raw outputs:', JSON.stringify(outputs, null, 2));
-                
-                const result = {};
-                
-                // Process auth outputs
-                const authOutput = outputs.find(o => o.OutputKey === 'authOutputs');
-                if (authOutput) {
-                  try {
-                    result.auth = JSON.parse(authOutput.OutputValue);
-                  } catch (e) {
-                    console.error('Error parsing auth outputs:', e);
+              if [ -f "public/amplify_outputs.json" ] && [ -s "public/amplify_outputs.json" ]; then
+                echo "Using existing amplify_outputs.json from public folder"
+                cp public/amplify_outputs.json amplify_outputs.json
+                echo "Existing amplify_outputs.json content:"
+                cat amplify_outputs.json | head -20
+              else
+                echo "Generating amplify_outputs.json via CloudFormation outputs"
+                set -e
+                REGION=${AWS_REGION:-ap-northeast-1}
+                STACK_NAME=$(aws cloudformation list-stacks --region "$REGION" \
+                  --query "reverse(sort_by(StackSummaries[?starts_with(StackName, 'amplify-${AWS_APP_ID}-${AWS_BRANCH}') && !contains(StackName, 'NestedStack') && (StackStatus=='CREATE_COMPLETE' || StackStatus=='UPDATE_COMPLETE')], &CreationTime))[:1].StackName" \
+                  --output text)
+                echo "Resolved stack: ${STACK_NAME}"
+                echo "Available stacks:"
+                aws cloudformation list-stacks --region "$REGION" --query "StackSummaries[?starts_with(StackName, 'amplify-${AWS_APP_ID}-${AWS_BRANCH}') && (StackStatus=='CREATE_COMPLETE' || StackStatus=='UPDATE_COMPLETE')].StackName" --output table
+                OUTPUTS_JSON=$(aws cloudformation describe-stacks --region "$REGION" --stack-name "$STACK_NAME" --query 'Stacks[0].Outputs' --output json)
+                echo "CloudFormation outputs: ${OUTPUTS_JSON}"
+                # Generate complete amplify_outputs.json with all outputs
+                node -e "
+                  const outputs = process.env.OUTPUTS_JSON ? JSON.parse(process.env.OUTPUTS_JSON) : [];
+                  console.log('Raw outputs:', JSON.stringify(outputs, null, 2));
+                  
+                  const result = {};
+                  
+                  // Process auth outputs
+                  const authOutput = outputs.find(o => o.OutputKey === 'authOutputs');
+                  if (authOutput) {
+                    try {
+                      result.auth = JSON.parse(authOutput.OutputValue);
+                    } catch (e) {
+                      console.error('Error parsing auth outputs:', e);
+                    }
                   }
-                }
-                
-                // Process data outputs  
-                const dataOutput = outputs.find(o => o.OutputKey === 'dataOutputs');
-                if (dataOutput) {
-                  try {
-                    result.data = JSON.parse(dataOutput.OutputValue);
-                  } catch (e) {
-                    console.error('Error parsing data outputs:', e);
+                  
+                  // Process data outputs  
+                  const dataOutput = outputs.find(o => o.OutputKey === 'dataOutputs');
+                  if (dataOutput) {
+                    try {
+                      result.data = JSON.parse(dataOutput.OutputValue);
+                    } catch (e) {
+                      console.error('Error parsing data outputs:', e);
+                    }
                   }
-                }
-                
-                // Process custom outputs
-                const customOutput = outputs.find(o => o.OutputKey === 'customOutputs');
-                if (customOutput) {
-                  try {
-                    result.custom = JSON.parse(customOutput.OutputValue);
-                  } catch (e) {
-                    console.error('Error parsing custom outputs:', e);
+                  
+                  // Process custom outputs
+                  const customOutput = outputs.find(o => o.OutputKey === 'customOutputs');
+                  if (customOutput) {
+                    try {
+                      result.custom = JSON.parse(customOutput.OutputValue);
+                    } catch (e) {
+                      console.error('Error parsing custom outputs:', e);
+                    }
                   }
-                }
-                
-                console.log('Generated amplify_outputs.json:', JSON.stringify(result, null, 2));
-                console.log(JSON.stringify(result));
-              " > amplify_outputs.json
-            - echo "Generated amplify_outputs.json content:"
-            - cat amplify_outputs.json
+                  
+                  console.log('Generated amplify_outputs.json:', JSON.stringify(result, null, 2));
+                  console.log(JSON.stringify(result));
+                " > amplify_outputs.json
+                echo "Generated amplify_outputs.json content:"
+                cat amplify_outputs.json
+              fi
             - cp amplify_outputs.json public/amplify_outputs.json
             # 3) Build frontend
             - echo "Building frontend"
