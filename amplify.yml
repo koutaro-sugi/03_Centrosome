@@ -16,11 +16,19 @@ applications:
             # 2) Use existing amplify_outputs.json or generate new one
             - echo "Checking for existing amplify_outputs.json"
             - |
+              # First, try to use the existing file from public folder
               if [ -f "public/amplify_outputs.json" ] && [ -s "public/amplify_outputs.json" ]; then
                 echo "Using existing amplify_outputs.json from public folder"
                 cp public/amplify_outputs.json amplify_outputs.json
-                echo "Existing amplify_outputs.json content:"
+                echo "Existing amplify_outputs.json content (first 20 lines):"
                 cat amplify_outputs.json | head -20
+                echo "File size: $(wc -c < amplify_outputs.json) bytes"
+              elif [ -f "build/amplify_outputs.json" ] && [ -s "build/amplify_outputs.json" ]; then
+                echo "Using existing amplify_outputs.json from build folder"
+                cp build/amplify_outputs.json amplify_outputs.json
+                echo "Build amplify_outputs.json content (first 20 lines):"
+                cat amplify_outputs.json | head -20
+                echo "File size: $(wc -c < amplify_outputs.json) bytes"
               else
                 echo "Generating amplify_outputs.json via CloudFormation outputs"
                 set -e

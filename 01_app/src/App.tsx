@@ -44,45 +44,17 @@ const useConfigureAmplify = () => {
     (async () => {
       // Load amplify_outputs.json and configure Amplify
       try {
-        console.log('[Centra] Attempting to load amplify_outputs.json...');
         const res = await fetch(`/amplify_outputs.json?v=${Date.now()}`, { cache: 'no-store' });
-        console.log('[Centra] Fetch response:', res.status, res.statusText);
         
         if (res.ok) {
           const outputs = await res.json();
-          console.log('[Centra] Raw outputs loaded:', outputs);
-          
           if (!cancelled && outputs) {
             (window as any).__AMPLIFY_OUTPUTS__ = outputs;
-            console.log('[Centra] Configuring Amplify with outputs...');
             
             try {
               Amplify.configure(outputs);
               
-              const userPoolId = outputs?.auth?.user_pool_id;
-              const userPoolClientId = outputs?.auth?.user_pool_client_id;
-              const idp = outputs?.auth?.identity_pool_id;
-              const appSyncUrl = outputs?.data?.url;
-              const logbookUrl = outputs?.custom?.logbookToSheetsUrl;
-              
-              console.log('[Centra] Amplify configuration details:', { 
-                userPoolId, 
-                userPoolClientId, 
-                identityPoolId: idp, 
-                appSyncUrl,
-                logbookUrl,
-                hasAuth: !!outputs?.auth,
-                hasData: !!outputs?.data,
-                hasCustom: !!outputs?.custom
-              });
-              
-              // Verify Amplify configuration
-              const currentConfig = Amplify.getConfig();
-              console.log('[Centra] Current Amplify config after configure:', currentConfig);
-              
-              // Only set configured to true if we have valid auth config
               if (outputs?.auth?.user_pool_id && outputs?.auth?.user_pool_client_id) {
-                console.log('[Centra] Amplify configuration successful');
                 setConfigured(true);
               } else {
                 console.error('[Centra] Invalid auth configuration in amplify_outputs.json');
@@ -100,7 +72,6 @@ const useConfigureAmplify = () => {
             const fallbackRes = await fetch(`/src/amplify_outputs.json?v=${Date.now()}`, { cache: 'no-store' });
             if (fallbackRes.ok) {
               const outputs = await fallbackRes.json();
-              console.log('[Centra] Loaded from fallback path:', outputs);
               if (!cancelled && outputs?.auth) {
                 Amplify.configure(outputs);
                 setConfigured(true);
