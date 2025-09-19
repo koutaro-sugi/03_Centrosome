@@ -42,22 +42,7 @@ const useConfigureAmplify = () => {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // 1) Configure from env immediately (existing backend scenario)
-      try {
-        const envConfig: any = {
-          Auth: {
-            Cognito: {
-              region: process.env.REACT_APP_AWS_REGION || 'ap-northeast-1',
-              userPoolId: process.env.REACT_APP_USER_POOL_ID,
-              userPoolClientId: process.env.REACT_APP_USER_POOL_CLIENT_ID,
-            },
-          },
-        };
-        Amplify.configure(envConfig);
-      } catch {}
-      if (!cancelled) setConfigured(true);
-
-      // 2) Non-blocking attempt to load outputs and merge config
+      // Load amplify_outputs.json and configure Amplify
       try {
         const res = await fetch(`/amplify_outputs.json?v=${Date.now()}`, { cache: 'no-store' });
         if (res.ok) {
@@ -66,15 +51,26 @@ const useConfigureAmplify = () => {
             (window as any).__AMPLIFY_OUTPUTS__ = outputs;
             Amplify.configure(outputs);
             try {
+              const userPoolId = outputs?.auth?.user_pool_id;
+              const userPoolClientId = outputs?.auth?.user_pool_client_id;
               const idp = outputs?.auth?.identity_pool_id;
               const appSyncUrl = outputs?.data?.url;
-              console.log('[Centra] Amplify outputs loaded', { identityPoolId: idp, appSyncUrl });
+              console.log('[Centra] Amplify outputs loaded', { 
+                userPoolId, 
+                userPoolClientId, 
+                identityPoolId: idp, 
+                appSyncUrl 
+              });
             } catch {}
           }
+        } else {
+          console.error('Failed to load amplify_outputs.json:', res.status, res.statusText);
         }
       } catch (e) {
-        console.error('Failed to optionally load amplify_outputs.json:', e);
+        console.error('Failed to load amplify_outputs.json:', e);
       }
+      
+      if (!cancelled) setConfigured(true);
     })();
     return () => {
       cancelled = true;

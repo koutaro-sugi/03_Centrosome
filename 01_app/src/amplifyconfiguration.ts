@@ -1,9 +1,5 @@
-// This file will be generated automatically by Amplify CLI
-// after running 'npx ampx sandbox' or deployment
-// Placeholder for now
+import outputs from '../amplify_outputs.json';
 
-const amplifyconfig = {
-  // Configuration will be populated here
-};
+const amplifyconfig = outputs;
 
 export default amplifyconfig;
