@@ -22,7 +22,7 @@ const existingUserPoolClientId = process.env.EXISTING_USER_POOL_CLIENT_ID;
 const existingIdentityPoolId = process.env.EXISTING_IDENTITY_POOL_ID;
 
 // 既存Lambda関数がある場合は参照のみ、ない場合は新規作成
-const logbookToSheets = existingLambdaArn 
+const logbookToSheets = existingLambdaArn
   ? undefined // 既存関数を参照する場合はdefineFunctionしない
   : defineFunction({
       name: "logbook-to-sheets",
@@ -76,7 +76,8 @@ const accountId = stack.account;
 
 // DynamoDB table for UAS logbook spreadsheet mapping
 // Use existing table if present to avoid name collision across stacks
-const uasLogbookTableName = process.env.UAS_LOGBOOK_TABLE_NAME || "UASLogbookSheets";
+const uasLogbookTableName =
+  process.env.UAS_LOGBOOK_TABLE_NAME || "UASLogbookSheets";
 const uasLogbookSheetsTable = dynamodb.Table.fromTableName(
   stack,
   "UASLogbookSheets",

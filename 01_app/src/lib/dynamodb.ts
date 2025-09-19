@@ -21,10 +21,13 @@ if (process.env.NODE_ENV === "development") {
 // DynamoDBクライアントの設定
 const client = new DynamoDBClient({
   region: process.env.REACT_APP_AWS_REGION || "ap-northeast-1",
-  credentials: {
-    accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY || "",
-  },
+  // ローカル環境ではAWS認証情報を自動取得
+  ...(process.env.REACT_APP_AWS_ACCESS_KEY_ID && process.env.REACT_APP_AWS_SECRET_ACCESS_KEY ? {
+    credentials: {
+      accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
+    },
+  } : {}),
 });
 
 // DocumentClientでJSONを直接扱えるように
