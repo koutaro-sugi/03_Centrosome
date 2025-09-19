@@ -52,12 +52,13 @@ const useConfigureAmplify = () => {
           const outputs = await res.json();
           console.log('[Centra] Raw outputs loaded:', outputs);
           
-          if (!cancelled) {
+          if (!cancelled && outputs) {
             (window as any).__AMPLIFY_OUTPUTS__ = outputs;
             console.log('[Centra] Configuring Amplify with outputs...');
-            Amplify.configure(outputs);
             
             try {
+              Amplify.configure(outputs);
+              
               const userPoolId = outputs?.auth?.user_pool_id;
               const userPoolClientId = outputs?.auth?.user_pool_client_id;
               const idp = outputs?.auth?.identity_pool_id;
@@ -77,19 +78,42 @@ const useConfigureAmplify = () => {
               
               // Verify Amplify configuration
               const currentConfig = Amplify.getConfig();
-              console.log('[Centra] Current Amplify config:', currentConfig);
+              console.log('[Centra] Current Amplify config after configure:', currentConfig);
+              
+              // Only set configured to true if we have valid auth config
+              if (outputs?.auth?.user_pool_id && outputs?.auth?.user_pool_client_id) {
+                console.log('[Centra] Amplify configuration successful');
+                setConfigured(true);
+              } else {
+                console.error('[Centra] Invalid auth configuration in amplify_outputs.json');
+                setConfigured(false);
+              }
             } catch (configError) {
-              console.error('[Centra] Error processing config:', configError);
+              console.error('[Centra] Error configuring Amplify:', configError);
+              setConfigured(false);
             }
           }
         } else {
-          console.error('Failed to load amplify_outputs.json:', res.status, res.statusText);
+          console.error('[Centra] Failed to load amplify_outputs.json:', res.status, res.statusText);
+          // Try to load from src directory as fallback
+          try {
+            const fallbackRes = await fetch(`/src/amplify_outputs.json?v=${Date.now()}`, { cache: 'no-store' });
+            if (fallbackRes.ok) {
+              const outputs = await fallbackRes.json();
+              console.log('[Centra] Loaded from fallback path:', outputs);
+              if (!cancelled && outputs?.auth) {
+                Amplify.configure(outputs);
+                setConfigured(true);
+              }
+            }
+          } catch (fallbackError) {
+            console.error('[Centra] Fallback also failed:', fallbackError);
+          }
         }
       } catch (e) {
-        console.error('Failed to load amplify_outputs.json:', e);
+        console.error('[Centra] Failed to load amplify_outputs.json:', e);
+        setConfigured(false);
       }
-      
-      if (!cancelled) setConfigured(true);
     })();
     return () => {
       cancelled = true;
