@@ -6,6 +6,7 @@ import {
   UpdateCommand,
   DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { fetchAuthSession } from "aws-amplify/auth";
 import { nowJST, toJSTDateString } from "../utils/dateTime";
 
 // デバッグログは開発環境のみ
@@ -18,24 +19,80 @@ if (process.env.NODE_ENV === "development") {
   });
 }
 
-// DynamoDBクライアントの設定
-const client = new DynamoDBClient({
-  region: process.env.REACT_APP_AWS_REGION || "ap-northeast-1",
-  // ローカル環境ではAWS認証情報を自動取得
-  ...(process.env.REACT_APP_AWS_ACCESS_KEY_ID && process.env.REACT_APP_AWS_SECRET_ACCESS_KEY ? {
-    credentials: {
-      accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
-    },
-  } : {}),
-});
+// DynamoDBクライアントの設定（Amplify認証を使用）
+const createDynamoDBClient = async () => {
+  try {
+    // Amplifyの認証セッションから認証情報を取得
+    const session = await fetchAuthSession();
+    
+    if (session.tokens?.idToken) {
+      // 認証されたユーザーの場合、Amplifyの認証情報を使用
+      return new DynamoDBClient({
+        region: process.env.REACT_APP_AWS_REGION || "ap-northeast-1",
+        credentials: session.credentials,
+      });
+    } else {
+      // 認証されていない場合、環境変数またはデフォルト認証を使用
+      return new DynamoDBClient({
+        region: process.env.REACT_APP_AWS_REGION || "ap-northeast-1",
+        ...(process.env.REACT_APP_AWS_ACCESS_KEY_ID && process.env.REACT_APP_AWS_SECRET_ACCESS_KEY ? {
+          credentials: {
+            accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
+          },
+        } : {}),
+      });
+    }
+  } catch (error) {
+    console.error('[DynamoDB] Failed to get auth session:', error);
+    // フォールバック: 環境変数またはデフォルト認証を使用
+    return new DynamoDBClient({
+      region: process.env.REACT_APP_AWS_REGION || "ap-northeast-1",
+      ...(process.env.REACT_APP_AWS_ACCESS_KEY_ID && process.env.REACT_APP_AWS_SECRET_ACCESS_KEY ? {
+        credentials: {
+          accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
+        },
+      } : {}),
+    });
+  }
+};
 
 // DocumentClientでJSONを直接扱えるように
-export const dynamodb = DynamoDBDocumentClient.from(client, {
-  marshallOptions: {
-    removeUndefinedValues: true, // undefined値を自動的に削除
-  },
-});
+export const createDynamoDBDocumentClient = async () => {
+  const client = await createDynamoDBClient();
+  return DynamoDBDocumentClient.from(client, {
+    marshallOptions: {
+      removeUndefinedValues: true, // undefined値を自動的に削除
+    },
+  });
+};
+
+// 後方互換性のためのエクスポート
+export const dynamodb = {
+  send: async (command: any) => {
+    const docClient = await createDynamoDBDocumentClient();
+    return docClient.send(command);
+  }
+};
+
+// 同期版のDynamoDBクライアント（非推奨だが後方互換性のため）
+let cachedClient: DynamoDBDocumentClient | null = null;
+
+const getCachedClient = async () => {
+  if (!cachedClient) {
+    cachedClient = await createDynamoDBDocumentClient();
+  }
+  return cachedClient;
+};
+
+// 既存のコードとの互換性を保つため、dynamodbを直接使用可能にする
+export const dynamodbSync = {
+  send: async (command: any) => {
+    const client = await getCachedClient();
+    return client.send(command);
+  }
+};
 
 // テーブル名
 export const TABLE_NAME =

@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { Flight, MenuBook, Logout } from '@mui/icons-material';
 import { LazyImage } from './LazyImage';
+import { useAuth } from '../contexts/AuthContextV2';
 
 const SidebarContainer = styled(Box)(() => ({
   width: 165,
@@ -82,15 +83,19 @@ const menuItems = [
 export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut } = useAuth();
 
   const handleNavigation = (path: string) => {
     navigate(path);
   };
 
   const handleLogout = async () => {
-    // AuthWrapperで定義されたhandleSignOutを呼び出す
-    if ((window as any).handleSignOut) {
-      await (window as any).handleSignOut();
+    try {
+      await signOut();
+      // ログアウト後はログインページにリダイレクト
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
     }
   };
 
