@@ -8,12 +8,18 @@ import * as iot from "aws-cdk-lib/aws-iot";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as ssm from "aws-cdk-lib/aws-ssm";
+import * as cognito from "aws-cdk-lib/aws-cognito";
 // import { createIoTPolicy, createIoTThingType, createIoTRuleRole, createIoTRule } from './backend/iot/resource';
 // import { configureSensorDataTable, createSensorDataTableConfiguration, addTableMonitoring } from './backend/dynamodb/resource';
 
 // 既存のLambda関数を参照するか、新規作成するかを環境変数で制御
 const existingLambdaArn = process.env.LOGBOOK_TO_SHEETS_FUNCTION_ARN;
 const existingLambdaUrl = process.env.LOGBOOK_TO_SHEETS_FUNCTION_URL;
+
+// 既存のユーザープールを参照するか、新規作成するかを環境変数で制御
+const existingUserPoolId = process.env.EXISTING_USER_POOL_ID;
+const existingUserPoolClientId = process.env.EXISTING_USER_POOL_CLIENT_ID;
+const existingIdentityPoolId = process.env.EXISTING_IDENTITY_POOL_ID;
 
 // 既存Lambda関数がある場合は参照のみ、ない場合は新規作成
 const logbookToSheets = existingLambdaArn 
@@ -35,6 +41,36 @@ export const backend = defineBackend({
 
 // 基本的な設定のみ（IoT設定は後で追加）
 const stack = Stack.of(backend.auth.resources.authenticatedUserIamRole);
+
+// 既存のユーザープールを参照する場合の処理
+if (existingUserPoolId) {
+  // 既存のユーザープールを参照
+  const existingUserPool = cognito.UserPool.fromUserPoolId(
+    stack,
+    "ExistingUserPool",
+    existingUserPoolId
+  );
+
+  // 既存のユーザープールクライアントを参照
+  const existingUserPoolClient = cognito.UserPoolClient.fromUserPoolClientId(
+    stack,
+    "ExistingUserPoolClient",
+    existingUserPoolClientId || ""
+  );
+
+  // 既存のアイデンティティプールを参照
+  const existingIdentityPool = cognito.CfnIdentityPool.fromCfnIdentityPoolId(
+    stack,
+    "ExistingIdentityPool",
+    existingIdentityPoolId || ""
+  );
+
+  // 既存のリソースをAmplifyの出力として設定
+  // Note: Amplify Gen2では既存リソースの出力は環境変数で制御
+  console.log(`Using existing User Pool: ${existingUserPoolId}`);
+  console.log(`Using existing User Pool Client: ${existingUserPoolClientId}`);
+  console.log(`Using existing Identity Pool: ${existingIdentityPoolId}`);
+}
 const region = stack.region;
 const accountId = stack.account;
 
