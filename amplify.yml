@@ -10,10 +10,7 @@ applications:
             - npm ci --prefer-offline --no-audit --no-fund
         build:
           commands:
-            # 1) Deploy Amplify Gen2 backend for this app/branch
-            - echo "Deploying Amplify Gen2 backend (pipeline-deploy)"
-            - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --debug
-            # 2) Generate amplify_outputs.json with fixed User Pool
+            # 1) Generate amplify_outputs.json with fixed User Pool FIRST
             - echo "Generating amplify_outputs.json with fixed User Pool"
             - |
               # Create amplify_outputs.json with fixed centra-weather-userpool-CentraV2
@@ -65,6 +62,9 @@ applications:
               cat amplify_outputs.json | head -20
               echo "File size: $(wc -c < amplify_outputs.json) bytes"
             - cp amplify_outputs.json public/amplify_outputs.json
+            # 2) Deploy Amplify Gen2 backend for this app/branch
+            - echo "Deploying Amplify Gen2 backend (pipeline-deploy)"
+            - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --debug
             # 3) Build frontend
             - echo "Building frontend"
             - npm run build
