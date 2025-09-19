@@ -44,24 +44,43 @@ const useConfigureAmplify = () => {
     (async () => {
       // Load amplify_outputs.json and configure Amplify
       try {
+        console.log('[Centra] Attempting to load amplify_outputs.json...');
         const res = await fetch(`/amplify_outputs.json?v=${Date.now()}`, { cache: 'no-store' });
+        console.log('[Centra] Fetch response:', res.status, res.statusText);
+        
         if (res.ok) {
           const outputs = await res.json();
+          console.log('[Centra] Raw outputs loaded:', outputs);
+          
           if (!cancelled) {
             (window as any).__AMPLIFY_OUTPUTS__ = outputs;
+            console.log('[Centra] Configuring Amplify with outputs...');
             Amplify.configure(outputs);
+            
             try {
               const userPoolId = outputs?.auth?.user_pool_id;
               const userPoolClientId = outputs?.auth?.user_pool_client_id;
               const idp = outputs?.auth?.identity_pool_id;
               const appSyncUrl = outputs?.data?.url;
-              console.log('[Centra] Amplify outputs loaded', { 
+              const logbookUrl = outputs?.custom?.logbookToSheetsUrl;
+              
+              console.log('[Centra] Amplify configuration details:', { 
                 userPoolId, 
                 userPoolClientId, 
                 identityPoolId: idp, 
-                appSyncUrl 
+                appSyncUrl,
+                logbookUrl,
+                hasAuth: !!outputs?.auth,
+                hasData: !!outputs?.data,
+                hasCustom: !!outputs?.custom
               });
-            } catch {}
+              
+              // Verify Amplify configuration
+              const currentConfig = Amplify.getConfig();
+              console.log('[Centra] Current Amplify config:', currentConfig);
+            } catch (configError) {
+              console.error('[Centra] Error processing config:', configError);
+            }
           }
         } else {
           console.error('Failed to load amplify_outputs.json:', res.status, res.statusText);
