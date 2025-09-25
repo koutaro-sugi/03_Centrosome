@@ -10,11 +10,9 @@ applications:
             - npm ci --prefer-offline --no-audit --no-fund
         build:
           commands:
-            # 1) Generate amplify_outputs.json with fixed User Pool FIRST
-            - echo "Using pre-configured correct amplify_outputs.json"
-            - cp correct_amplify_outputs.json amplify_outputs.json
-            - echo "Copied correct amplify_outputs.json with fixed User Pool"
-            - cat amplify_outputs.json
+            # 1) Use existing amplify_outputs.json (Gen2 approach - no auto-generation)
+            - echo "Using existing amplify_outputs.json for Gen2 app"
+            - ls -la amplify_outputs.json
             - echo "File size: $(wc -c < amplify_outputs.json) bytes"
             - cp amplify_outputs.json public/amplify_outputs.json
             # 2) Build frontend (using existing backend resources)
