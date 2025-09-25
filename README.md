@@ -201,4 +201,4 @@ npm test            # テスト実行
 
 ---
 
-**Centrosome** - *細胞の中心体のように、UAVシステムの中心となる統合監視プラットフォーム*
+**Centrosome** - *細胞の中心体のように、UAVシステムの中心となる統合監視プラットフォーム*# Test deployment - Thu Sep 25 12:01:05 JST 2025
