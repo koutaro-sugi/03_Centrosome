@@ -457,6 +457,76 @@ export const Logbook: React.FC = () => {
     setCurrentScreen(isSotenSelected ? "checklist" : "flight");
   };
 
+  // キーボードショートカット処理
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Shift + Enter: 次へボタンの動作
+      if (e.shiftKey && e.key === "Enter") {
+        e.preventDefault();
+
+        switch (currentScreen) {
+          case "inspection":
+            if (INSPECTION_ITEMS.every((item) => inspectionChecks[item.id])) {
+              handleInspectionComplete();
+            }
+            break;
+          case "checklist":
+            if (
+              CHECKLIST_ITEMS.filter((item) => item.hasCheckbox).every(
+                (item) => checklistItems[item.id]
+              )
+            ) {
+              handleChecklistComplete();
+            }
+            break;
+          case "flight":
+            if (!isRecording && buttonCoverOpen) {
+              handleRecordToggle();
+            }
+            break;
+          case "postflight":
+            if (!showCompleteConfirm) {
+              setShowCompleteConfirm(true);
+            }
+            break;
+          case "summary":
+            handleSaveAndReturnHome();
+            break;
+        }
+      }
+
+      // Enter: フォーカスされた要素のアクション実行
+      if (e.key === "Enter" && !e.shiftKey) {
+        const activeElement = document.activeElement;
+        
+        // チェックボックスの場合
+        if (activeElement && activeElement.type === "checkbox") {
+          e.preventDefault();
+          const checkbox = activeElement as HTMLInputElement;
+          checkbox.checked = !checkbox.checked;
+          checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        
+        // テキストフィールドの場合（フォーカス状態でEnter）
+        if (activeElement && activeElement.tagName === "INPUT" && activeElement.type === "text") {
+          // テキストフィールドでは何もしない（デフォルトの改行動作を許可）
+        }
+      }
+
+      // Tab: フォーカス可能な要素間の移動（ブラウザのデフォルト動作を使用）
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    currentScreen,
+    inspectionChecks,
+    checklistItems,
+    isRecording,
+    buttonCoverOpen,
+    showCompleteConfirm,
+  ]);
+
   // 飛行開始画面へ進む
   const handleChecklistComplete = () => {
     const checkableItems = CHECKLIST_ITEMS.filter((item) => item.hasCheckbox);
@@ -1199,6 +1269,7 @@ export const Logbook: React.FC = () => {
                     });
                     setInspectionChecks(newChecks);
                   }}
+                  tabIndex={1}
                   sx={{
                     color: "white",
                     "&.Mui-checked": {
@@ -1257,6 +1328,7 @@ export const Logbook: React.FC = () => {
                       })
                     }
                     size="large"
+                    tabIndex={INSPECTION_ITEMS.indexOf(item) + 2}
                     sx={{
                       color: "grey.400",
                       "&.Mui-checked": { color: "success.main" },
@@ -1279,6 +1351,7 @@ export const Logbook: React.FC = () => {
                       }
                       onBlur={() => setEditingNote(null)}
                       autoFocus
+                      inputProps={{ tabIndex: INSPECTION_ITEMS.indexOf(item) + 100 }}
                     />
                   </Box>
                 )}
@@ -1436,6 +1509,7 @@ export const Logbook: React.FC = () => {
                         }
                       }}
                       size="large"
+                      tabIndex={index + 1}
                       sx={{
                         color: "grey.400",
                         "&.Mui-checked": { color: "success.main" },

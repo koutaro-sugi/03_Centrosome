@@ -11,7 +11,8 @@ applications:
         build:
           commands:
             - "echo 'Using existing amplify_outputs.json for Gen2 app'"
-            - "ls -la amplify_outputs.json"
+            - "ls -la correct_amplify_outputs.json"
+            - "cp correct_amplify_outputs.json amplify_outputs.json"
             - "echo 'File size: $(wc -c < amplify_outputs.json) bytes'"
             - "cp amplify_outputs.json public/amplify_outputs.json"
             - "echo 'Building frontend'"
