@@ -59,12 +59,14 @@ function getDdb() {
 async function getMappedSpreadsheetId(
   ddb: DynamoDBDocumentClient,
   tableName: string,
-  registrationNumber: string
+  registrationNumber: string,
+  aircraftId: string
 ): Promise<string | null> {
+  const compositeKey = `${registrationNumber}#${aircraftId}`;
   const res = await ddb.send(
     new GetCommand({
       TableName: tableName,
-      Key: { registrationNumber },
+      Key: { compositeKey },
     })
   );
   return (res.Item as any)?.spreadsheetId || null;
@@ -74,17 +76,21 @@ async function putMappedSpreadsheetId(
   ddb: DynamoDBDocumentClient,
   tableName: string,
   registrationNumber: string,
+  aircraftId: string,
   spreadsheetId: string
 ) {
   // JST時刻で更新日時を記録
   const now = new Date();
   const jstTime = new Date(now.getTime() + TZ_OFFSET_MIN * 60 * 1000);
+  const compositeKey = `${registrationNumber}#${aircraftId}`;
 
   await ddb.send(
     new PutCommand({
       TableName: tableName,
       Item: {
+        compositeKey,
         registrationNumber,
+        aircraftId,
         spreadsheetId,
         updatedAt: jstTime.toISOString(),
       },
@@ -95,12 +101,14 @@ async function putMappedSpreadsheetId(
 async function deleteMappedSpreadsheetId(
   ddb: DynamoDBDocumentClient,
   tableName: string,
-  registrationNumber: string
+  registrationNumber: string,
+  aircraftId: string
 ) {
+  const compositeKey = `${registrationNumber}#${aircraftId}`;
   await ddb.send(
     new DeleteCommand({
       TableName: tableName,
-      Key: { registrationNumber },
+      Key: { compositeKey },
     })
   );
 }
@@ -271,13 +279,15 @@ function buildRow(flightLog: any): {
   from: string;
   to: string;
   off: string; // formula or string
-  on: string;  // formula or string
+  on: string; // formula or string
   safety: string;
 } {
   // Prefer DATE()/TIME() formulas for reliable calc in sheets
-  const ymd = (flightLog.flightDate
-    ? flightLog.flightDate
-    : toJstYmd(flightLog.flightStartTime)) as string | undefined;
+  const ymd = (
+    flightLog.flightDate
+      ? flightLog.flightDate
+      : toJstYmd(flightLog.flightStartTime)
+  ) as string | undefined;
   let dateFormula = "";
   if (ymd) {
     const [y, m, d] = ymd.split("-").map((v: string) => parseInt(v, 10));
@@ -323,6 +333,7 @@ export const handler = async (
       body.folderId || undefined;
     const registrationNumber: string =
       body.registrationNumber || flightLog.registrationNumber;
+    const aircraftId: string = body.aircraftId || flightLog.aircraftId || "";
     const aircraftName: string = body.aircraftName || "";
     if (!registrationNumber) {
       return {
@@ -334,23 +345,39 @@ export const handler = async (
         }),
       };
     }
+    if (!aircraftId) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders(),
+        body: JSON.stringify({
+          ok: false,
+          message: "aircraftId is required",
+        }),
+      };
+    }
 
     const { sheets, drive } = await getGoogleClients();
 
-    // resolve or create spreadsheet per registrationNumber
+    // resolve or create spreadsheet per registrationNumber + aircraftId
     const tableName = process.env.UAS_LOGBOOK_TABLE;
     if (!tableName) throw new Error("Missing UAS_LOGBOOK_TABLE");
     const ddb = getDdb();
     let spreadsheetId = await getMappedSpreadsheetId(
       ddb,
       tableName,
-      registrationNumber
+      registrationNumber,
+      aircraftId
     );
 
     if (spreadsheetId) {
       const trashed = await isSpreadsheetInTrash(drive, spreadsheetId);
       if (trashed) {
-        await deleteMappedSpreadsheetId(ddb, tableName, registrationNumber);
+        await deleteMappedSpreadsheetId(
+          ddb,
+          tableName,
+          registrationNumber,
+          aircraftId
+        );
         spreadsheetId = null as any;
       }
     }
@@ -370,6 +397,7 @@ export const handler = async (
         ddb,
         tableName,
         registrationNumber,
+        aircraftId,
         spreadsheetId
       );
     }
@@ -435,7 +463,8 @@ function corsHeaders() {
     // Allow all origins or restrict to your domains
     "Access-Control-Allow-Origin": "*",
     // Allow typical headers used by fetch
-    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Requested-With",
+    "Access-Control-Allow-Headers":
+      "Content-Type,Authorization,X-Requested-With",
     // Allow required methods
     "Access-Control-Allow-Methods": "OPTIONS,POST",
     // Cache preflight

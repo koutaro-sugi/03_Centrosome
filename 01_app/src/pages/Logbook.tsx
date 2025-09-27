@@ -130,7 +130,13 @@ const CHECKLIST_ITEMS = [
   { id: "armTakeoff", title: "アーム・離陸 次画面へ", hasCheckbox: false },
 ];
 
-type Screen = "initial" | "inspection" | "checklist" | "flight" | "postflight" | "summary";
+type Screen =
+  | "initial"
+  | "inspection"
+  | "checklist"
+  | "flight"
+  | "postflight"
+  | "summary";
 
 export const Logbook: React.FC = () => {
   // TODO: 実際のユーザーIDを使用
@@ -187,18 +193,35 @@ export const Logbook: React.FC = () => {
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [specialFlights, setSpecialFlights] = useState<string[]>([]);
   const [flightPurposeText, setFlightPurposeText] = useState<string>("");
-  const [postFlightChecks, setPostFlightChecks] = useState<Record<string, boolean>>({});
+  const [postFlightChecks, setPostFlightChecks] = useState<
+    Record<string, boolean>
+  >({});
   const [postFlightNotes, setPostFlightNotes] = useState<string>("");
-  const [sotenProcedures, setSotenProcedures] = useState<{ cameraStop: boolean; screenStop: boolean }>({ cameraStop: false, screenStop: false });
+  const [sotenProcedures, setSotenProcedures] = useState<{
+    cameraStop: boolean;
+    screenStop: boolean;
+  }>({ cameraStop: false, screenStop: false });
   const [editLocations, setEditLocations] = useState(false);
   const [editSpecialFlights, setEditSpecialFlights] = useState(false);
   const [editPurpose, setEditPurpose] = useState(false);
-  const [originalSpecialFlights, setOriginalSpecialFlights] = useState<string[] | null>(null);
-  const [originalFlightPurposeText, setOriginalFlightPurposeText] = useState<string | null>(null);
-  const [originalTakeoffAddress, setOriginalTakeoffAddress] = useState<string | null>(null);
-  const [originalLandingAddress, setOriginalLandingAddress] = useState<string | null>(null);
-  const [originalTakeoffLocation, setOriginalTakeoffLocation] = useState<any | null>(null);
-  const [originalLandingLocation, setOriginalLandingLocation] = useState<any | null>(null);
+  const [originalSpecialFlights, setOriginalSpecialFlights] = useState<
+    string[] | null
+  >(null);
+  const [originalFlightPurposeText, setOriginalFlightPurposeText] = useState<
+    string | null
+  >(null);
+  const [originalTakeoffAddress, setOriginalTakeoffAddress] = useState<
+    string | null
+  >(null);
+  const [originalLandingAddress, setOriginalLandingAddress] = useState<
+    string | null
+  >(null);
+  const [originalTakeoffLocation, setOriginalTakeoffLocation] = useState<
+    any | null
+  >(null);
+  const [originalLandingLocation, setOriginalLandingLocation] = useState<
+    any | null
+  >(null);
   // サマリーの離陸行の幅を計測して矢印のセンタリングに利用（フォールバックは左寄せ）
   const takeoffLineRef = useRef<HTMLDivElement | null>(null);
   const [takeoffLineWidth, setTakeoffLineWidth] = useState<number | null>(null);
@@ -275,20 +298,30 @@ export const Logbook: React.FC = () => {
 
   // Guard: 非SOTENでchecklistに入った場合はflightに戻す
   useEffect(() => {
-    if (currentScreen === 'checklist' && !isSotenSelected) {
-      setCurrentScreen('flight');
+    if (currentScreen === "checklist" && !isSotenSelected) {
+      setCurrentScreen("flight");
     }
   }, [currentScreen, isSotenSelected]);
 
   // Summary originals snapshot for change highlighting
   useEffect(() => {
-    if (currentScreen === 'summary') {
-      if (originalSpecialFlights === null) setOriginalSpecialFlights([...specialFlights]);
-      if (originalFlightPurposeText === null) setOriginalFlightPurposeText(flightPurposeText || '');
-      if (originalTakeoffAddress === null) setOriginalTakeoffAddress(takeoffLocation?.address || '');
-      if (originalLandingAddress === null) setOriginalLandingAddress(landingLocation?.address || '');
-      if (originalTakeoffLocation === null) setOriginalTakeoffLocation(takeoffLocation ? { ...takeoffLocation } : null);
-      if (originalLandingLocation === null) setOriginalLandingLocation(landingLocation ? { ...landingLocation } : null);
+    if (currentScreen === "summary") {
+      if (originalSpecialFlights === null)
+        setOriginalSpecialFlights([...specialFlights]);
+      if (originalFlightPurposeText === null)
+        setOriginalFlightPurposeText(flightPurposeText || "");
+      if (originalTakeoffAddress === null)
+        setOriginalTakeoffAddress(takeoffLocation?.address || "");
+      if (originalLandingAddress === null)
+        setOriginalLandingAddress(landingLocation?.address || "");
+      if (originalTakeoffLocation === null)
+        setOriginalTakeoffLocation(
+          takeoffLocation ? { ...takeoffLocation } : null
+        );
+      if (originalLandingLocation === null)
+        setOriginalLandingLocation(
+          landingLocation ? { ...landingLocation } : null
+        );
       // 幅計測
       const measure = () => {
         if (takeoffLineRef.current) {
@@ -297,14 +330,15 @@ export const Logbook: React.FC = () => {
       };
       // 少し遅延させてレイアウト確定後に計測
       setTimeout(measure, 0);
-      window.addEventListener('resize', measure);
-      return () => window.removeEventListener('resize', measure);
+      window.addEventListener("resize", measure);
+      return () => window.removeEventListener("resize", measure);
     } else {
       setEditLocations(false);
       setEditSpecialFlights(false);
       setEditPurpose(false);
       if (originalSpecialFlights !== null) setOriginalSpecialFlights(null);
-      if (originalFlightPurposeText !== null) setOriginalFlightPurposeText(null);
+      if (originalFlightPurposeText !== null)
+        setOriginalFlightPurposeText(null);
       if (originalTakeoffAddress !== null) setOriginalTakeoffAddress(null);
       if (originalLandingAddress !== null) setOriginalLandingAddress(null);
       if (originalTakeoffLocation !== null) setOriginalTakeoffLocation(null);
@@ -540,7 +574,8 @@ export const Logbook: React.FC = () => {
           .split(" ")[0]
           .replace(/:/g, "")
           .substring(0, 4),
-        flightType: specialFlights && specialFlights.length ? specialFlights : undefined,
+        flightType:
+          specialFlights && specialFlights.length ? specialFlights : undefined,
         timeBeforeEngine: checkCompletedTime
           ? Math.floor(
               (recordingStartTime!.getTime() - checkCompletedTime.getTime()) /
@@ -594,7 +629,9 @@ export const Logbook: React.FC = () => {
         let url: string | undefined;
         let parentFolderId: string | undefined;
         try {
-          const outputsRes = await fetch("/amplify_outputs.json", { cache: "no-store" });
+          const outputsRes = await fetch("/amplify_outputs.json", {
+            cache: "no-store",
+          });
           if (outputsRes.ok) {
             const outputs = await outputsRes.json();
             url = outputs?.custom?.logbookToSheetsUrl;
@@ -612,6 +649,7 @@ export const Logbook: React.FC = () => {
           body: JSON.stringify({
             flightLog: saved,
             registrationNumber: (saved.registrationNumber || "").trim(),
+            aircraftId: saved.aircraftId || "",
             aircraftName: aircraft?.name || "",
             folderId: parentFolderId,
           }),
@@ -746,8 +784,8 @@ export const Logbook: React.FC = () => {
                     <Button
                       fullWidth
                       variant="outlined"
-                      startIcon={<LocationIcon />}
-                      onClick={() => setShowLocationPicker("takeoff")}
+                      startIcon={<DataTableIcon />}
+                      onClick={() => setShowSimpleLocationPicker("takeoff")}
                       sx={{ justifyContent: "flex-start", textAlign: "left" }}
                     >
                       {takeoffLocation ? (
@@ -767,7 +805,7 @@ export const Logbook: React.FC = () => {
                     </Button>
                     <Button
                       variant="contained"
-                      onClick={() => setShowSimpleLocationPicker("takeoff")}
+                      onClick={() => setShowLocationPicker("takeoff")}
                       sx={{
                         minWidth: "auto",
                         px: 1.5,
@@ -777,7 +815,7 @@ export const Logbook: React.FC = () => {
                         justifyContent: "center",
                       }}
                     >
-                      <DataTableIcon />
+                      <LocationIcon />
                     </Button>
                   </Stack>
                 </Box>
@@ -787,8 +825,8 @@ export const Logbook: React.FC = () => {
                     <Button
                       fullWidth
                       variant="outlined"
-                      startIcon={<LocationIcon />}
-                      onClick={() => setShowLocationPicker("landing")}
+                      startIcon={<DataTableIcon />}
+                      onClick={() => setShowSimpleLocationPicker("landing")}
                       sx={{ justifyContent: "flex-start", textAlign: "left" }}
                     >
                       {landingLocation ? (
@@ -808,7 +846,7 @@ export const Logbook: React.FC = () => {
                     </Button>
                     <Button
                       variant="contained"
-                      onClick={() => setShowSimpleLocationPicker("landing")}
+                      onClick={() => setShowLocationPicker("landing")}
                       sx={{
                         minWidth: "auto",
                         px: 1.5,
@@ -818,7 +856,7 @@ export const Logbook: React.FC = () => {
                         justifyContent: "center",
                       }}
                     >
-                      <DataTableIcon />
+                      <LocationIcon />
                     </Button>
                   </Stack>
                 </Box>
@@ -1249,7 +1287,16 @@ export const Logbook: React.FC = () => {
           </Stack>
         </Box>
 
-        <Box sx={{ p: 2, backgroundColor: '#fff', boxShadow: '0 -2px 4px rgba(0,0,0,0.1)', position: 'sticky', bottom: 0, pb: 'calc(16px + env(safe-area-inset-bottom))' }}>
+        <Box
+          sx={{
+            p: 2,
+            backgroundColor: "#fff",
+            boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
+            position: "sticky",
+            bottom: 0,
+            pb: "calc(16px + env(safe-area-inset-bottom))",
+          }}
+        >
           <Button
             fullWidth
             variant="contained"
@@ -1318,12 +1365,28 @@ export const Logbook: React.FC = () => {
                       }
                     : {},
                 }}
-                onClick={() => {
+                onClick={(e) => {
                   if (item.hasCheckbox) {
-                    setChecklistItems({
-                      ...checklistItems,
-                      [item.id]: !checklistItems[item.id],
-                    });
+                    // シフトキーが押されている場合は他のチェックボックスも一括チェック
+                    if (e.shiftKey) {
+                      const newChecklistItems = { ...checklistItems };
+                      const currentChecked = checklistItems[item.id] || false;
+
+                      // 全てのチェックリスト項目を同じ状態に設定
+                      CHECKLIST_ITEMS.forEach((checklistItem) => {
+                        if (checklistItem.hasCheckbox) {
+                          newChecklistItems[checklistItem.id] = !currentChecked;
+                        }
+                      });
+
+                      setChecklistItems(newChecklistItems);
+                    } else {
+                      // 通常のクリック
+                      setChecklistItems({
+                        ...checklistItems,
+                        [item.id]: !checklistItems[item.id],
+                      });
+                    }
                   }
                 }}
               >
@@ -1349,10 +1412,28 @@ export const Logbook: React.FC = () => {
                       checked={checklistItems[item.id] || false}
                       onChange={(e) => {
                         e.stopPropagation();
-                        setChecklistItems({
-                          ...checklistItems,
-                          [item.id]: e.target.checked,
-                        });
+
+                        // シフトキーが押されている場合は他のチェックボックスも一括チェック
+                        if ((e.nativeEvent as any).shiftKey) {
+                          const newChecklistItems = { ...checklistItems };
+                          const targetChecked = e.target.checked;
+
+                          // 全てのチェックリスト項目を同じ状態に設定
+                          CHECKLIST_ITEMS.forEach((checklistItem) => {
+                            if (checklistItem.hasCheckbox) {
+                              newChecklistItems[checklistItem.id] =
+                                targetChecked;
+                            }
+                          });
+
+                          setChecklistItems(newChecklistItems);
+                        } else {
+                          // 通常のチェックボックス変更
+                          setChecklistItems({
+                            ...checklistItems,
+                            [item.id]: e.target.checked,
+                          });
+                        }
                       }}
                       size="large"
                       sx={{
@@ -1396,29 +1477,66 @@ export const Logbook: React.FC = () => {
   // ポストフライト画面（SOTEN手順 + 点検）
   if (currentScreen === "postflight") {
     const POST_CHECKS = [
-      { id: 'clean', label: '機体にゴミ等の付着はないか' },
-      { id: 'mount', label: '各機器は確実に取り付けられているか（ネジ等の脱落やゆるみ等）' },
-      { id: 'damage', label: '機体（プロペラ、フレーム等）に損傷やゆがみはないか' },
-      { id: 'heat', label: '各機器の異常な発熱はないか' },
+      { id: "clean", label: "機体にゴミ等の付着はないか" },
+      {
+        id: "mount",
+        label: "各機器は確実に取り付けられているか（ネジ等の脱落やゆるみ等）",
+      },
+      {
+        id: "damage",
+        label: "機体（プロペラ、フレーム等）に損傷やゆがみはないか",
+      },
+      { id: "heat", label: "各機器の異常な発熱はないか" },
     ];
     const postChecklistAll = POST_CHECKS.every((c) => postFlightChecks[c.id]);
-    const sotenOK = !isSotenSelected || (sotenProcedures.cameraStop && sotenProcedures.screenStop);
+    const sotenOK =
+      !isSotenSelected ||
+      (sotenProcedures.cameraStop && sotenProcedures.screenStop);
     const remarksRequired = !postChecklistAll;
-    const canComplete = sotenOK && (postChecklistAll || postFlightNotes.trim().length > 0);
+    const canComplete =
+      sotenOK && (postChecklistAll || postFlightNotes.trim().length > 0);
     return (
       <Box sx={mobileContainer}>
-        <Box sx={{ p: 2, bgcolor: '#fff', boxShadow: 1 }}>
+        <Box sx={{ p: 2, bgcolor: "#fff", boxShadow: 1 }}>
           <Typography variant="h6" fontWeight="bold" align="center">
             ポストフライト
           </Typography>
         </Box>
-        <Box sx={{ p: 2, flex: 1, overflow: 'auto' }}>
+        <Box sx={{ p: 2, flex: 1, overflow: "auto" }}>
           {isSotenSelected && (
-            <Paper sx={{ p: 2, mb: 2, borderLeft: '4px solid #1976d2' }}>
-              <Typography variant="subtitle1" fontWeight="bold">SOTENプロシージャー</Typography>
+            <Paper sx={{ p: 2, mb: 2, borderLeft: "4px solid #1976d2" }}>
+              <Typography variant="subtitle1" fontWeight="bold">
+                SOTENプロシージャー
+              </Typography>
               <Stack>
-                <FormControlLabel control={<Checkbox checked={sotenProcedures.cameraStop} onChange={(e)=>setSotenProcedures(p=>({...p,cameraStop:e.target.checked}))} />} label="カメラ録画停止" />
-                <FormControlLabel control={<Checkbox checked={sotenProcedures.screenStop} onChange={(e)=>setSotenProcedures(p=>({...p,screenStop:e.target.checked}))} />} label="スクリーンキャプチャ停止" />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={sotenProcedures.cameraStop}
+                      onChange={(e) =>
+                        setSotenProcedures((p) => ({
+                          ...p,
+                          cameraStop: e.target.checked,
+                        }))
+                      }
+                    />
+                  }
+                  label="カメラ録画停止"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={sotenProcedures.screenStop}
+                      onChange={(e) =>
+                        setSotenProcedures((p) => ({
+                          ...p,
+                          screenStop: e.target.checked,
+                        }))
+                      }
+                    />
+                  }
+                  label="スクリーンキャプチャ停止"
+                />
               </Stack>
             </Paper>
           )}
@@ -1434,7 +1552,10 @@ export const Logbook: React.FC = () => {
                     <Checkbox
                       checked={!!postFlightChecks[item.id]}
                       onChange={(e) =>
-                        setPostFlightChecks({ ...postFlightChecks, [item.id]: e.target.checked })
+                        setPostFlightChecks({
+                          ...postFlightChecks,
+                          [item.id]: e.target.checked,
+                        })
                       }
                     />
                   }
@@ -1447,31 +1568,67 @@ export const Logbook: React.FC = () => {
               multiline
               minRows={2}
               sx={{ mt: 2 }}
-              label={remarksRequired ? '特記事項（未チェック項目がある場合は必須）' : '特記事項'}
+              label={
+                remarksRequired
+                  ? "特記事項（未チェック項目がある場合は必須）"
+                  : "特記事項"
+              }
               value={postFlightNotes}
-              onChange={(e)=>setPostFlightNotes(e.target.value)}
+              onChange={(e) => setPostFlightNotes(e.target.value)}
               error={remarksRequired && postFlightNotes.trim().length === 0}
-              helperText={remarksRequired && postFlightNotes.trim().length === 0 ? '未チェック項目があるため、特記事項を記入してください' : undefined}
+              helperText={
+                remarksRequired && postFlightNotes.trim().length === 0
+                  ? "未チェック項目があるため、特記事項を記入してください"
+                  : undefined
+              }
             />
           </Paper>
         </Box>
-        <Box sx={{ p: 2, bgcolor: '#fff', boxShadow: '0 -2px 4px rgba(0,0,0,0.1)', position: 'sticky', bottom: 0, pb: 'calc(16px + env(safe-area-inset-bottom))' }}>
-          <Button fullWidth variant="contained" size="large" onClick={()=>setShowCompleteConfirm(true)} disabled={!canComplete}>フライト完了</Button>
+        <Box
+          sx={{
+            p: 2,
+            bgcolor: "#fff",
+            boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
+            position: "sticky",
+            bottom: 0,
+            pb: "calc(16px + env(safe-area-inset-bottom))",
+          }}
+        >
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            onClick={() => setShowCompleteConfirm(true)}
+            disabled={!canComplete}
+          >
+            フライト完了
+          </Button>
         </Box>
-        <Dialog open={showCompleteConfirm} onClose={()=>setShowCompleteConfirm(false)} maxWidth="xs" fullWidth>
+        <Dialog
+          open={showCompleteConfirm}
+          onClose={() => setShowCompleteConfirm(false)}
+          maxWidth="xs"
+          fullWidth
+        >
           <DialogContent>
             <Stack spacing={2}>
-              <Typography variant="h6" align="center">フライト完了</Typography>
-              <Typography variant="body2" align="center" color="text.secondary">点検が完了していればスライドしてください</Typography>
+              <Typography variant="h6" align="center">
+                フライト完了
+              </Typography>
+              <Typography variant="body2" align="center" color="text.secondary">
+                点検が完了していればスライドしてください
+              </Typography>
               <SlideToConfirm
                 onConfirm={() => {
                   if (!canComplete) {
-                    setError('SOTENプロシージャーおよび飛行後点検の要件を満たしてください');
+                    setError(
+                      "SOTENプロシージャーおよび飛行後点検の要件を満たしてください"
+                    );
                     return;
                   }
                   setError(null);
                   setShowCompleteConfirm(false);
-                  setCurrentScreen('summary');
+                  setCurrentScreen("summary");
                 }}
                 text="スライドしてフライト完了"
               />
@@ -1486,62 +1643,168 @@ export const Logbook: React.FC = () => {
   if (currentScreen === "summary") {
     return (
       <Box sx={mobileContainer}>
-        <Box sx={{ p: 2, bgcolor: '#fff', boxShadow: 1 }}>
-          <Typography variant="h6" fontWeight="bold" align="center">フライト概要</Typography>
+        <Box sx={{ p: 2, bgcolor: "#fff", boxShadow: 1 }}>
+          <Typography variant="h6" fontWeight="bold" align="center">
+            フライト概要
+          </Typography>
         </Box>
-        <Box sx={{ p: 2, flex: 1, overflow: 'auto' }}>
+        <Box sx={{ p: 2, flex: 1, overflow: "auto" }}>
           <Stack spacing={1.5}>
-            <Paper sx={{ p: 1.5, position: 'relative', border: editLocations ? '2px solid' : undefined, borderColor: editLocations ? 'primary.main' : undefined }}>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                <Typography variant="subtitle2" color="text.secondary">飛行場所</Typography>
-                <IconButton size="small" onClick={()=>setEditLocations(v=>!v)} aria-label="編集"><EditIcon fontSize="small" /></IconButton>
+            <Paper
+              sx={{
+                p: 1.5,
+                position: "relative",
+                border: editLocations ? "2px solid" : undefined,
+                borderColor: editLocations ? "primary.main" : undefined,
+              }}
+            >
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                sx={{ mb: 0.5 }}
+              >
+                <Typography variant="subtitle2" color="text.secondary">
+                  飛行場所
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setEditLocations((v) => !v)}
+                  aria-label="編集"
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
               </Stack>
               <Stack spacing={0.5}>
-                <Box ref={takeoffLineRef} sx={{ display: 'inline-block' }}>
-                  <Typography variant="body2">離陸場所：{takeoffLocation ? extractPlaceName(takeoffLocation.address) : '未選択'}</Typography>
+                <Box ref={takeoffLineRef} sx={{ display: "inline-block" }}>
+                  <Typography variant="body2">
+                    離陸場所：
+                    {takeoffLocation
+                      ? extractPlaceName(takeoffLocation.address)
+                      : "未選択"}
+                  </Typography>
                 </Box>
-                <Box sx={{ width: takeoffLineWidth ? `${takeoffLineWidth}px` : 'auto', textAlign: takeoffLineWidth ? 'center' : 'left' }}>
+                <Box
+                  sx={{
+                    width: takeoffLineWidth ? `${takeoffLineWidth}px` : "auto",
+                    textAlign: takeoffLineWidth ? "center" : "left",
+                  }}
+                >
                   <Typography variant="body2">↓</Typography>
                 </Box>
-                <Typography variant="body2">着陸場所：{landingLocation ? extractPlaceName(landingLocation.address) : '未選択'}</Typography>
+                <Typography variant="body2">
+                  着陸場所：
+                  {landingLocation
+                    ? extractPlaceName(landingLocation.address)
+                    : "未選択"}
+                </Typography>
               </Stack>
               {editLocations && (
                 <>
                   <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                    <IconButton size="small" onClick={() => setShowSimpleLocationPicker('takeoff')}><EditIcon fontSize="small" /></IconButton>
-                    <IconButton size="small" onClick={() => setShowSimpleLocationPicker('landing')}><EditIcon fontSize="small" /></IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => setShowSimpleLocationPicker("takeoff")}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => setShowSimpleLocationPicker("landing")}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
                   </Stack>
-                  <Box sx={{ position: 'absolute', right: 8, bottom: 8, display: 'flex', gap: 1 }}>
-                    <Button size="small" variant="outlined" onClick={() => {
-                      setTakeoffLocation(originalTakeoffLocation);
-                      setLandingLocation(originalLandingLocation);
-                      setEditLocations(false);
-                    }}>キャンセル</Button>
-                    <Button size="small" variant="contained" onClick={() => {
-                      setOriginalTakeoffLocation(takeoffLocation ? { ...takeoffLocation } : null);
-                      setOriginalLandingLocation(landingLocation ? { ...landingLocation } : null);
-                      setOriginalTakeoffAddress(takeoffLocation?.address || '');
-                      setOriginalLandingAddress(landingLocation?.address || '');
-                      setEditLocations(false);
-                    }}>保存</Button>
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      right: 8,
+                      bottom: 8,
+                      display: "flex",
+                      gap: 1,
+                    }}
+                  >
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        setTakeoffLocation(originalTakeoffLocation);
+                        setLandingLocation(originalLandingLocation);
+                        setEditLocations(false);
+                      }}
+                    >
+                      キャンセル
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => {
+                        setOriginalTakeoffLocation(
+                          takeoffLocation ? { ...takeoffLocation } : null
+                        );
+                        setOriginalLandingLocation(
+                          landingLocation ? { ...landingLocation } : null
+                        );
+                        setOriginalTakeoffAddress(
+                          takeoffLocation?.address || ""
+                        );
+                        setOriginalLandingAddress(
+                          landingLocation?.address || ""
+                        );
+                        setEditLocations(false);
+                      }}
+                    >
+                      保存
+                    </Button>
                   </Box>
                 </>
               )}
             </Paper>
 
-            <Paper sx={{ p: 1.5, position: 'relative', border: editSpecialFlights ? '2px solid' : undefined, borderColor: editSpecialFlights ? 'primary.main' : undefined }}>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>飛行時間</Typography>
-              <Typography variant="body1">{formatTime(recordingTime)}</Typography>
+            <Paper
+              sx={{
+                p: 1.5,
+                position: "relative",
+                border: editSpecialFlights ? "2px solid" : undefined,
+                borderColor: editSpecialFlights ? "primary.main" : undefined,
+              }}
+            >
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                sx={{ mb: 0.5 }}
+              >
+                飛行時間
+              </Typography>
+              <Typography variant="body1">
+                {formatTime(recordingTime)}
+              </Typography>
             </Paper>
 
             <Paper sx={{ p: 1.5 }}>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                <Typography variant="subtitle2" color="text.secondary">特定飛行</Typography>
-                <IconButton size="small" onClick={()=>setEditSpecialFlights(v=>!v)} aria-label="編集"><EditIcon fontSize="small" /></IconButton>
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                sx={{ mb: 0.5 }}
+              >
+                <Typography variant="subtitle2" color="text.secondary">
+                  特定飛行
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setEditSpecialFlights((v) => !v)}
+                  aria-label="編集"
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
               </Stack>
               <Stack>
                 {SPECIAL_FLIGHT_OPTIONS.map((label) => {
-                  const changed = originalSpecialFlights ? (originalSpecialFlights.includes(label) !== specialFlights.includes(label)) : false;
+                  const changed = originalSpecialFlights
+                    ? originalSpecialFlights.includes(label) !==
+                      specialFlights.includes(label)
+                    : false;
                   return (
                     <FormControlLabel
                       key={label}
@@ -1550,38 +1813,92 @@ export const Logbook: React.FC = () => {
                           checked={specialFlights.includes(label)}
                           onChange={(e) => {
                             if (!editSpecialFlights) return;
-                            setSpecialFlights((prev) => e.target.checked ? [...prev, label] : prev.filter((v) => v !== label));
+                            setSpecialFlights((prev) =>
+                              e.target.checked
+                                ? [...prev, label]
+                                : prev.filter((v) => v !== label)
+                            );
                           }}
-                          sx={changed ? { color: 'warning.main', '&.Mui-checked': { color: 'warning.main' } } : undefined}
+                          sx={
+                            changed
+                              ? {
+                                  color: "warning.main",
+                                  "&.Mui-checked": { color: "warning.main" },
+                                }
+                              : undefined
+                          }
                         />
                       }
                       label={label}
-                      sx={changed ? { color: 'warning.main' } : undefined}
+                      sx={changed ? { color: "warning.main" } : undefined}
                     />
                   );
                 })}
               </Stack>
               {specialFlights.length === 0 && (
-                <Typography variant="caption" color="text.secondary">該当しない</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  該当しない
+                </Typography>
               )}
               {editSpecialFlights && (
-                <Box sx={{ position: 'absolute', right: 8, bottom: 8, display: 'flex', gap: 1 }}>
-                  <Button size="small" variant="outlined" onClick={() => {
-                    if (originalSpecialFlights) setSpecialFlights([...originalSpecialFlights]);
-                    setEditSpecialFlights(false);
-                  }}>キャンセル</Button>
-                  <Button size="small" variant="contained" onClick={() => {
-                    setOriginalSpecialFlights([...specialFlights]);
-                    setEditSpecialFlights(false);
-                  }}>保存</Button>
+                <Box
+                  sx={{
+                    position: "absolute",
+                    right: 8,
+                    bottom: 8,
+                    display: "flex",
+                    gap: 1,
+                  }}
+                >
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      if (originalSpecialFlights)
+                        setSpecialFlights([...originalSpecialFlights]);
+                      setEditSpecialFlights(false);
+                    }}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={() => {
+                      setOriginalSpecialFlights([...specialFlights]);
+                      setEditSpecialFlights(false);
+                    }}
+                  >
+                    保存
+                  </Button>
                 </Box>
               )}
             </Paper>
 
-            <Paper sx={{ p: 1.5, position: 'relative', border: editPurpose ? '2px solid' : undefined, borderColor: editPurpose ? 'primary.main' : undefined }}>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                <Typography variant="subtitle2" color="text.secondary">飛行目的</Typography>
-                <IconButton size="small" onClick={()=>setEditPurpose(v=>!v)} aria-label="編集"><EditIcon fontSize="small" /></IconButton>
+            <Paper
+              sx={{
+                p: 1.5,
+                position: "relative",
+                border: editPurpose ? "2px solid" : undefined,
+                borderColor: editPurpose ? "primary.main" : undefined,
+              }}
+            >
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                sx={{ mb: 0.5 }}
+              >
+                <Typography variant="subtitle2" color="text.secondary">
+                  飛行目的
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setEditPurpose((v) => !v)}
+                  aria-label="編集"
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
               </Stack>
               <TextField
                 fullWidth
@@ -1589,21 +1906,47 @@ export const Logbook: React.FC = () => {
                 onChange={(e) => setFlightPurposeText(e.target.value)}
                 InputProps={{ readOnly: !editPurpose }}
                 sx={
-                  originalFlightPurposeText !== null && flightPurposeText !== originalFlightPurposeText
-                    ? { '& .MuiOutlinedInput-root fieldset': { borderColor: 'warning.main' } }
+                  originalFlightPurposeText !== null &&
+                  flightPurposeText !== originalFlightPurposeText
+                    ? {
+                        "& .MuiOutlinedInput-root fieldset": {
+                          borderColor: "warning.main",
+                        },
+                      }
                     : undefined
                 }
               />
               {editPurpose && (
-                <Box sx={{ position: 'absolute', right: 8, bottom: 8, display: 'flex', gap: 1 }}>
-                  <Button size="small" variant="outlined" onClick={() => {
-                    if (originalFlightPurposeText !== null) setFlightPurposeText(originalFlightPurposeText);
-                    setEditPurpose(false);
-                  }}>キャンセル</Button>
-                  <Button size="small" variant="contained" onClick={() => {
-                    setOriginalFlightPurposeText(flightPurposeText || '');
-                    setEditPurpose(false);
-                  }}>保存</Button>
+                <Box
+                  sx={{
+                    position: "absolute",
+                    right: 8,
+                    bottom: 8,
+                    display: "flex",
+                    gap: 1,
+                  }}
+                >
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      if (originalFlightPurposeText !== null)
+                        setFlightPurposeText(originalFlightPurposeText);
+                      setEditPurpose(false);
+                    }}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={() => {
+                      setOriginalFlightPurposeText(flightPurposeText || "");
+                      setEditPurpose(false);
+                    }}
+                  >
+                    保存
+                  </Button>
                 </Box>
               )}
             </Paper>
@@ -1611,15 +1954,38 @@ export const Logbook: React.FC = () => {
         </Box>
         {(() => {
           const hasSummaryEdits = !!(
-            (originalSpecialFlights && (originalSpecialFlights.length !== specialFlights.length || originalSpecialFlights.some(v=>!specialFlights.includes(v)))) ||
-            (originalFlightPurposeText !== null && originalFlightPurposeText !== (flightPurposeText || '')) ||
-            (originalTakeoffAddress !== null && originalTakeoffAddress !== (takeoffLocation?.address || '')) ||
-            (originalLandingAddress !== null && originalLandingAddress !== (landingLocation?.address || ''))
+            (originalSpecialFlights &&
+              (originalSpecialFlights.length !== specialFlights.length ||
+                originalSpecialFlights.some(
+                  (v) => !specialFlights.includes(v)
+                ))) ||
+            (originalFlightPurposeText !== null &&
+              originalFlightPurposeText !== (flightPurposeText || "")) ||
+            (originalTakeoffAddress !== null &&
+              originalTakeoffAddress !== (takeoffLocation?.address || "")) ||
+            (originalLandingAddress !== null &&
+              originalLandingAddress !== (landingLocation?.address || ""))
           );
           return (
-            <Box sx={{ p: 2, bgcolor: '#fff', boxShadow: '0 -2px 4px rgba(0,0,0,0.1)', position: 'sticky', bottom: 0, pb: 'calc(16px + env(safe-area-inset-bottom))' }}>
-              <Button fullWidth variant="contained" size="large" onClick={handleSaveAndReturnHome}>
-                {hasSummaryEdits ? '修正内容を保存してホームに戻る' : 'ホームに戻る'}
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: "#fff",
+                boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
+                position: "sticky",
+                bottom: 0,
+                pb: "calc(16px + env(safe-area-inset-bottom))",
+              }}
+            >
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                onClick={handleSaveAndReturnHome}
+              >
+                {hasSummaryEdits
+                  ? "修正内容を保存してホームに戻る"
+                  : "ホームに戻る"}
               </Button>
             </Box>
           );
@@ -1696,7 +2062,11 @@ export const Logbook: React.FC = () => {
 
           {/* 特定飛行の種類（複数選択） */}
           <Paper sx={{ p: 1.5 }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              sx={{ mb: 0.5 }}
+            >
               特定飛行
             </Typography>
             <Stack spacing={0.5}>
@@ -1723,7 +2093,11 @@ export const Logbook: React.FC = () => {
 
           {/* 飛行の目的（フリーテキスト） */}
           <Paper sx={{ p: 1.5 }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              sx={{ mb: 0.5 }}
+            >
               飛行の目的
             </Typography>
             <TextField
@@ -1848,7 +2222,16 @@ export const Logbook: React.FC = () => {
         </Stack>
       </Box>
 
-      <Box sx={{ p: 2, backgroundColor: '#fff', boxShadow: '0 -2px 4px rgba(0,0,0,0.1)', position: 'sticky', bottom: 0, pb: 'calc(16px + env(safe-area-inset-bottom))' }}>
+      <Box
+        sx={{
+          p: 2,
+          backgroundColor: "#fff",
+          boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
+          position: "sticky",
+          bottom: 0,
+          pb: "calc(16px + env(safe-area-inset-bottom))",
+        }}
+      >
         <Box sx={{ position: "relative" }}>
           {!isRecording && (
             <Button
