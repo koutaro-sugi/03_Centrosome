@@ -10,12 +10,10 @@ applications:
             - npm ci --prefer-offline --no-audit --no-fund
         build:
           commands:
-            # 1) Use existing amplify_outputs.json (Gen2 approach - no auto-generation)
             - echo "Using existing amplify_outputs.json for Gen2 app"
             - ls -la amplify_outputs.json
             - echo "File size: $(wc -c < amplify_outputs.json) bytes"
             - cp amplify_outputs.json public/amplify_outputs.json
-            # 2) Build frontend (using existing backend resources)
             - echo "Building frontend"
             - npm run build
             - ls -la build
