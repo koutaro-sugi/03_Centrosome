@@ -500,15 +500,15 @@ export const Logbook: React.FC = () => {
         const activeElement = document.activeElement;
         
         // チェックボックスの場合
-        if (activeElement && activeElement.type === "checkbox") {
+        if (activeElement && activeElement instanceof HTMLInputElement && activeElement.type === "checkbox") {
           e.preventDefault();
-          const checkbox = activeElement as HTMLInputElement;
+          const checkbox = activeElement;
           checkbox.checked = !checkbox.checked;
           checkbox.dispatchEvent(new Event('change', { bubbles: true }));
         }
         
         // テキストフィールドの場合（フォーカス状態でEnter）
-        if (activeElement && activeElement.tagName === "INPUT" && activeElement.type === "text") {
+        if (activeElement && activeElement instanceof HTMLInputElement && activeElement.type === "text") {
           // テキストフィールドでは何もしない（デフォルトの改行動作を許可）
         }
       }
