@@ -32,7 +32,7 @@
       "value": "ap-northeast-1",
       "description": "AWS Region"
     },
-    "logbookToSheetsUrl": "https://3istw3h7prtmx3rklsmzf2vxye0qynsm.lambda-url.ap-northeast-1.on.aws/",
+    "logbookToSheetsUrl": "https://gtps2ddwkk5ruvisryxsdlyriy0qzios.lambda-url.ap-northeast-1.on.aws/",
     "parentFolderId": {
       "value": "0AA9zD0nHvNXhUk9PVA",
       "description": "Google Drive parent folder ID for frontend-created workbooks"
