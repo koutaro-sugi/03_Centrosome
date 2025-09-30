@@ -131,13 +131,31 @@ async function createSpreadsheetFromTemplate(
 
   const copy = await drive.files.copy({
     fileId: templateId,
-    requestBody: targetFolderId
-      ? { name: title, parents: [targetFolderId] }
-      : { name: title },
+    requestBody: { name: title },
     supportsAllDrives: true,
   });
   const id = copy.data.id as string;
   if (!id) throw new Error("Failed to create spreadsheet");
+
+  // ターゲットフォルダが指定されている場合は、明示的にファイルを移動
+  if (targetFolderId) {
+    // 現在の親フォルダを取得
+    const file = await drive.files.get({
+      fileId: id,
+      fields: 'parents',
+      supportsAllDrives: true,
+    });
+    const previousParents = file.data.parents ? file.data.parents.join(',') : '';
+
+    // ファイルを新しいフォルダに移動
+    await drive.files.update({
+      fileId: id,
+      addParents: targetFolderId,
+      removeParents: previousParents,
+      supportsAllDrives: true,
+    });
+  }
+
   return id;
 }
 
