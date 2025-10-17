@@ -9,12 +9,44 @@ import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import * as cognito from "aws-cdk-lib/aws-cognito";
+import * as fs from "fs";
+import * as path from "path";
 // import { createIoTPolicy, createIoTThingType, createIoTRuleRole, createIoTRule } from './backend/iot/resource';
 // import { configureSensorDataTable, createSensorDataTableConfiguration, addTableMonitoring } from './backend/dynamodb/resource';
 
 // 既存のLambda関数を参照するか、新規作成するかを環境変数で制御
-const existingLambdaArn = process.env.LOGBOOK_TO_SHEETS_FUNCTION_ARN;
-const existingLambdaUrl = process.env.LOGBOOK_TO_SHEETS_FUNCTION_URL;
+const staticLogbookConfig = loadStaticLogbookConfig();
+const referencedLambdaArn =
+  process.env.LOGBOOK_TO_SHEETS_FUNCTION_ARN ||
+  staticLogbookConfig.lambdaArn ||
+  undefined;
+const referencedLambdaUrl =
+  process.env.LOGBOOK_TO_SHEETS_FUNCTION_URL ||
+  staticLogbookConfig.lambdaUrl ||
+  undefined;
+const defaultAllowedOrigins = ["https://41dev.org", "http://localhost:3000"];
+const envAllowedOrigins = parseOriginsFromString(
+  process.env.LOGBOOK_ALLOWED_ORIGINS ||
+    process.env.LOGBOOK_TO_SHEETS_ALLOWED_ORIGINS ||
+    process.env.ALLOWED_ORIGINS
+);
+const staticAllowedOrigins = staticLogbookConfig.allowedOrigins ?? [];
+let resolvedAllowedOrigins =
+  envAllowedOrigins.length > 0
+    ? sanitizeAllowedOrigins(envAllowedOrigins)
+    : staticAllowedOrigins.length > 0
+    ? sanitizeAllowedOrigins(staticAllowedOrigins)
+    : defaultAllowedOrigins;
+
+if (resolvedAllowedOrigins.includes("*") && resolvedAllowedOrigins.length > 1) {
+  resolvedAllowedOrigins = sanitizeAllowedOrigins(
+    resolvedAllowedOrigins.filter((origin) => origin !== "*")
+  );
+}
+
+if (resolvedAllowedOrigins.length === 0) {
+  resolvedAllowedOrigins = defaultAllowedOrigins;
+}
 
 // 既存のユーザープールを参照するか、新規作成するかを環境変数で制御
 const existingUserPoolId = process.env.EXISTING_USER_POOL_ID;
@@ -22,7 +54,9 @@ const existingUserPoolClientId = process.env.EXISTING_USER_POOL_CLIENT_ID;
 const existingIdentityPoolId = process.env.EXISTING_IDENTITY_POOL_ID;
 
 // 既存Lambda関数がある場合は参照のみ、ない場合は新規作成
-const logbookToSheets = existingLambdaArn
+const reuseExistingLambda = Boolean(referencedLambdaArn || referencedLambdaUrl);
+
+const logbookToSheets = reuseExistingLambda
   ? undefined // 既存関数を参照する場合はdefineFunctionしない
   : defineFunction({
       name: "logbook-to-sheets",
@@ -112,6 +146,8 @@ if (logbookToSheets) {
 
 // 既存Lambda関数がある場合は環境変数設定をスキップ
 if (logbookToSheets) {
+  const allowedOriginsEnv = resolvedAllowedOrigins.join(",");
+
   // Environment variables for logbook-to-sheets function
   backend.logbookToSheets.resources.lambda.addEnvironment(
     "SHEETS_TEMPLATE_ID",
@@ -136,6 +172,14 @@ if (logbookToSheets) {
   backend.logbookToSheets.resources.lambda.addEnvironment(
     "AIRCRAFT_TABLE",
     backend.data.resources.tables["Aircraft"].tableName
+  );
+  backend.logbookToSheets.resources.lambda.addEnvironment(
+    "LOGBOOK_ALLOWED_ORIGINS",
+    allowedOriginsEnv
+  );
+  backend.logbookToSheets.resources.lambda.addEnvironment(
+    "LOGBOOK_TO_SHEETS_ALLOWED_ORIGINS",
+    allowedOriginsEnv
   );
 
   // Centralized secret via SSM Parameter Store (SecureString)
@@ -189,7 +233,10 @@ if (logbookToSheets) {
   const functionUrl = backend.logbookToSheets.resources.lambda.addFunctionUrl({
     authType: lambda.FunctionUrlAuthType.NONE,
     cors: {
-      allowedOrigins: ["*"],
+      allowedOrigins:
+        resolvedAllowedOrigins.length > 0
+          ? resolvedAllowedOrigins
+          : ["*"],
       allowedMethods: [lambda.HttpMethod.ALL],
       allowedHeaders: ["*"],
     },
@@ -197,7 +244,7 @@ if (logbookToSheets) {
   logbookToSheetsUrl = functionUrl.url;
 } else {
   // 既存Lambda関数を参照する場合
-  logbookToSheetsUrl = existingLambdaUrl || "";
+  logbookToSheetsUrl = referencedLambdaUrl || "";
 }
 
 // 基本的な出力設定
@@ -213,5 +260,89 @@ backend.addOutput({
       description:
         "Google Drive parent folder ID for frontend-created workbooks",
     },
+    logbookToSheetsAllowedOrigins: {
+      value: resolvedAllowedOrigins.join(","),
+      description: "Comma-separated allowed origins for logbook-to-sheets Function URL",
+    },
   },
 });
+
+interface StaticLogbookConfig {
+  lambdaArn?: string;
+  lambdaUrl?: string;
+  allowedOrigins?: string[];
+}
+
+function loadStaticLogbookConfig(): StaticLogbookConfig {
+  try {
+    const configPath = path.join(__dirname, "..", "correct_amplify_outputs.json");
+    const raw = fs.readFileSync(configPath, "utf-8");
+    const parsed = JSON.parse(raw);
+    const custom = parsed?.custom ?? {};
+
+    const lambdaArn =
+      typeof custom.logbookToSheetsArn === "string"
+        ? custom.logbookToSheetsArn
+        : undefined;
+    const lambdaUrl =
+      typeof custom.logbookToSheetsUrl === "string"
+        ? custom.logbookToSheetsUrl
+        : undefined;
+
+    let allowedOrigins: string[] = [];
+    if (Array.isArray(custom.logbookToSheetsAllowedOrigins)) {
+      allowedOrigins = custom.logbookToSheetsAllowedOrigins;
+    } else if (
+      custom.logbookToSheetsAllowedOrigins &&
+      typeof custom.logbookToSheetsAllowedOrigins === "object" &&
+      Array.isArray(custom.logbookToSheetsAllowedOrigins.value)
+    ) {
+      allowedOrigins = custom.logbookToSheetsAllowedOrigins.value;
+    } else if (typeof custom.logbookToSheetsAllowedOrigins === "string") {
+      allowedOrigins = parseOriginsFromString(
+        custom.logbookToSheetsAllowedOrigins
+      );
+    } else if (
+      custom.logbookToSheetsAllowedOrigins &&
+      typeof custom.logbookToSheetsAllowedOrigins === "object" &&
+      typeof custom.logbookToSheetsAllowedOrigins.value === "string"
+    ) {
+      allowedOrigins = parseOriginsFromString(
+        custom.logbookToSheetsAllowedOrigins.value
+      );
+    }
+
+    return {
+      lambdaArn,
+      lambdaUrl,
+      allowedOrigins: sanitizeAllowedOrigins(allowedOrigins),
+    };
+  } catch (_error) {
+    return {};
+  }
+}
+
+function parseOriginsFromString(value?: string | null): string[] {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+}
+
+function sanitizeAllowedOrigins(origins: string[]): string[] {
+  const unique = origins
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0)
+    .filter((origin, index, self) => self.indexOf(origin) === index);
+
+  if (unique.includes("*") && unique.length > 1) {
+    const withoutWildcard = unique.filter((origin) => origin !== "*");
+    if (withoutWildcard.length > 0) {
+      return withoutWildcard;
+    }
+    return ["*"];
+  }
+
+  return unique;
+}

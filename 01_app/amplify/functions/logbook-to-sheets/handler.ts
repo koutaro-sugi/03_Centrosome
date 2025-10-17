@@ -12,6 +12,46 @@ import {
 const ENTRY_ROW_START = 5;
 const ENTRY_ROW_END = 19;
 const TEMPLATE_SHEET_NAME = "00_Template";
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://41dev.org",
+  "http://localhost:3000",
+];
+
+const ALLOWED_ORIGINS = (() => {
+  const candidateStrings = [
+    process.env.LOGBOOK_ALLOWED_ORIGINS,
+    process.env.LOGBOOK_TO_SHEETS_ALLOWED_ORIGINS,
+    process.env.ALLOWED_ORIGINS,
+  ];
+
+  const parsed = candidateStrings.reduce<string[]>((acc, value) => {
+    if (!value) return acc;
+    value
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter((origin) => origin.length > 0)
+      .forEach((origin) => {
+        if (!acc.includes(origin)) {
+          acc.push(origin);
+        }
+      });
+    return acc;
+  }, []);
+
+  if (parsed.length === 0) {
+    return DEFAULT_ALLOWED_ORIGINS;
+  }
+
+  if (parsed.includes("*") && parsed.length > 1) {
+    const withoutWildcard = parsed.filter((origin) => origin !== "*");
+    if (withoutWildcard.length > 0) {
+      return withoutWildcard;
+    }
+    return ["*"];
+  }
+
+  return parsed;
+})();
 
 // JST helpers
 const TZ_OFFSET_MIN = 9 * 60;
@@ -142,10 +182,12 @@ async function createSpreadsheetFromTemplate(
     // 現在の親フォルダを取得
     const file = await drive.files.get({
       fileId: id,
-      fields: 'parents',
+      fields: "parents",
       supportsAllDrives: true,
     });
-    const previousParents = file.data.parents ? file.data.parents.join(',') : '';
+    const previousParents = file.data.parents
+      ? file.data.parents.join(",")
+      : "";
 
     // ファイルを新しいフォルダに移動
     await drive.files.update({
@@ -340,7 +382,7 @@ export const handler = async (
   if (method === "OPTIONS") {
     return {
       statusCode: 200,
-      headers: corsHeaders(),
+      headers: corsHeaders(event),
       body: "",
     };
   }
@@ -356,7 +398,7 @@ export const handler = async (
     if (!registrationNumber) {
       return {
         statusCode: 400,
-        headers: corsHeaders(),
+        headers: corsHeaders(event),
         body: JSON.stringify({
           ok: false,
           message: "registrationNumber is required",
@@ -366,7 +408,7 @@ export const handler = async (
     if (!aircraftId) {
       return {
         statusCode: 400,
-        headers: corsHeaders(),
+        headers: corsHeaders(event),
         body: JSON.stringify({
           ok: false,
           message: "aircraftId is required",
@@ -455,7 +497,7 @@ export const handler = async (
 
     return {
       statusCode: 200,
-      headers: corsHeaders(),
+      headers: corsHeaders(event),
       body: JSON.stringify({
         ok: true,
         spreadsheetId,
@@ -466,7 +508,7 @@ export const handler = async (
   } catch (e: any) {
     return {
       statusCode: 500,
-      headers: corsHeaders(),
+      headers: corsHeaders(event),
       body: JSON.stringify({
         ok: false,
         message: e.message || "Internal error",
@@ -475,17 +517,52 @@ export const handler = async (
   }
 };
 
-function corsHeaders() {
-  return {
+function corsHeaders(event?: APIGatewayProxyEventV2) {
+  const requestOrigin =
+    event?.headers?.origin ?? event?.headers?.Origin ?? undefined;
+  const { allowOrigin, shouldVary } = resolveAllowedOrigin(requestOrigin);
+
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    // Allow all origins or restrict to your domains
-    "Access-Control-Allow-Origin": "*",
-    // Allow typical headers used by fetch
+    "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Headers":
       "Content-Type,Authorization,X-Requested-With",
-    // Allow required methods
     "Access-Control-Allow-Methods": "OPTIONS,POST",
-    // Cache preflight
     "Access-Control-Max-Age": "86400",
+  };
+
+  if (shouldVary) {
+    headers["Vary"] = "Origin";
+  }
+
+  return headers;
+}
+
+function resolveAllowedOrigin(origin?: string): {
+  allowOrigin: string;
+  shouldVary: boolean;
+} {
+  if (ALLOWED_ORIGINS.length === 0) {
+    return { allowOrigin: "*", shouldVary: false };
+  }
+
+  if (ALLOWED_ORIGINS.length === 1) {
+    const only = ALLOWED_ORIGINS[0];
+    if (only === "*") {
+      return { allowOrigin: "*", shouldVary: false };
+    }
+    return {
+      allowOrigin: only,
+      shouldVary: false,
+    };
+  }
+
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    return { allowOrigin: origin, shouldVary: true };
+  }
+
+  return {
+    allowOrigin: ALLOWED_ORIGINS[0],
+    shouldVary: true,
   };
 }

@@ -33,6 +33,11 @@
       "description": "AWS Region"
     },
     "logbookToSheetsUrl": "https://gtps2ddwkk5ruvisryxsdlyriy0qzios.lambda-url.ap-northeast-1.on.aws/",
+    "logbookToSheetsArn": "arn:aws:lambda:ap-northeast-1:785197721624:function:amplify-centraweatherdash-logbooktosheetslambdaFAE-VHuRnApm2P8l",
+    "logbookToSheetsAllowedOrigins": [
+      "https://41dev.org",
+      "http://localhost:3000"
+    ],
     "parentFolderId": {
       "value": "0AA9zD0nHvNXhUk9PVA",
       "description": "Google Drive parent folder ID for frontend-created workbooks"

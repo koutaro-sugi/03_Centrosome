@@ -1,8 +1,17 @@
 {
   "name": "logbook-to-sheets-function",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.700.0",
+    "@aws-sdk/lib-dynamodb": "^3.700.0",
     "googleapis": "^157.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.0.0"
   }
 }
