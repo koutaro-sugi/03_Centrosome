@@ -16,6 +16,9 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "https://41dev.org",
   "http://localhost:3000",
 ];
+const USE_FUNCTION_URL_CORS =
+  (process.env.LOGBOOK_USE_FUNCTION_URL_CORS ?? "true").toLowerCase() ===
+  "true";
 
 const ALLOWED_ORIGINS = (() => {
   const candidateStrings = [
@@ -520,19 +523,22 @@ export const handler = async (
 function corsHeaders(event?: APIGatewayProxyEventV2) {
   const requestOrigin =
     event?.headers?.origin ?? event?.headers?.Origin ?? undefined;
-  const { allowOrigin, shouldVary } = resolveAllowedOrigin(requestOrigin);
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Headers":
-      "Content-Type,Authorization,X-Requested-With",
-    "Access-Control-Allow-Methods": "OPTIONS,POST",
-    "Access-Control-Max-Age": "86400",
   };
 
-  if (shouldVary) {
-    headers["Vary"] = "Origin";
+  if (!USE_FUNCTION_URL_CORS) {
+    const { allowOrigin, shouldVary } = resolveAllowedOrigin(requestOrigin);
+    headers["Access-Control-Allow-Origin"] = allowOrigin;
+    headers["Access-Control-Allow-Headers"] =
+      "Content-Type,Authorization,X-Requested-With";
+    headers["Access-Control-Allow-Methods"] = "OPTIONS,POST";
+    headers["Access-Control-Max-Age"] = "86400";
+
+    if (shouldVary) {
+      headers["Vary"] = "Origin";
+    }
   }
 
   return headers;
