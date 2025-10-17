@@ -12,10 +12,7 @@ import {
 const ENTRY_ROW_START = 5;
 const ENTRY_ROW_END = 19;
 const TEMPLATE_SHEET_NAME = "00_Template";
-const DEFAULT_ALLOWED_ORIGINS = [
-  "https://41dev.org",
-  "http://localhost:3000",
-];
+const DEFAULT_ALLOWED_ORIGINS = ["https://41dev.org", "http://localhost:3000"];
 const USE_FUNCTION_URL_CORS =
   (process.env.LOGBOOK_USE_FUNCTION_URL_CORS ?? "true").toLowerCase() ===
   "true";
@@ -105,11 +102,13 @@ async function getMappedSpreadsheetId(
   registrationNumber: string,
   aircraftId: string
 ): Promise<string | null> {
-  const compositeKey = `${registrationNumber}#${aircraftId}`;
   const res = await ddb.send(
     new GetCommand({
       TableName: tableName,
-      Key: { compositeKey },
+      Key: {
+        PK: `LOGBOOK#${registrationNumber}`,
+        SK: `AIRCRAFT#${aircraftId}`,
+      },
     })
   );
   return (res.Item as any)?.spreadsheetId || null;
@@ -125,17 +124,19 @@ async function putMappedSpreadsheetId(
   // JST時刻で更新日時を記録
   const now = new Date();
   const jstTime = new Date(now.getTime() + TZ_OFFSET_MIN * 60 * 1000);
-  const compositeKey = `${registrationNumber}#${aircraftId}`;
 
   await ddb.send(
     new PutCommand({
       TableName: tableName,
       Item: {
-        compositeKey,
+        PK: `LOGBOOK#${registrationNumber}`,
+        SK: `AIRCRAFT#${aircraftId}`,
+        entityType: "LOGBOOK_MAPPING",
         registrationNumber,
         aircraftId,
         spreadsheetId,
         updatedAt: jstTime.toISOString(),
+        createdAt: jstTime.toISOString(),
       },
     })
   );
@@ -147,11 +148,13 @@ async function deleteMappedSpreadsheetId(
   registrationNumber: string,
   aircraftId: string
 ) {
-  const compositeKey = `${registrationNumber}#${aircraftId}`;
   await ddb.send(
     new DeleteCommand({
       TableName: tableName,
-      Key: { compositeKey },
+      Key: {
+        PK: `LOGBOOK#${registrationNumber}`,
+        SK: `AIRCRAFT#${aircraftId}`,
+      },
     })
   );
 }
@@ -509,6 +512,7 @@ export const handler = async (
       }),
     };
   } catch (e: any) {
+    console.error("[ERROR] Unhandled exception:", e);
     return {
       statusCode: 500,
       headers: corsHeaders(event),
