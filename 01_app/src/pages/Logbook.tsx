@@ -695,6 +695,9 @@ export const Logbook: React.FC = () => {
 
       // Google Sheetsへの書き込み
       try {
+        console.group("📊 Google Sheets 同期開始");
+        console.log("⏰ 開始時刻:", new Date().toISOString());
+        
         // まず outputs を試し、なければ環境変数フォールバック
         let url: string | undefined;
         let parentFolderId: string | undefined;
@@ -706,38 +709,105 @@ export const Logbook: React.FC = () => {
             const outputs = await outputsRes.json();
             url = outputs?.custom?.logbookToSheetsUrl;
             parentFolderId = outputs?.custom?.parentFolderId || undefined;
+            console.log("✅ amplify_outputs.json から設定を取得");
+            console.log("  - Lambda URL:", url);
+            console.log("  - Parent Folder ID:", parentFolderId || "(未設定)");
+          } else {
+            console.warn("⚠️ amplify_outputs.json の取得に失敗 (HTTP", outputsRes.status, ")");
           }
-        } catch {}
-        if (!url) url = process.env.REACT_APP_LOGBOOK_TO_SHEETS_URL;
-        if (!url) throw new Error("logbookToSheetsUrl 未設定（outputs/env）");
+        } catch (outputsError) {
+          console.warn("⚠️ amplify_outputs.json の読み込みエラー:", outputsError);
+        }
+        
+        if (!url) {
+          url = process.env.REACT_APP_LOGBOOK_TO_SHEETS_URL;
+          console.log("📌 環境変数から Lambda URL を取得:", url);
+        }
+        
+        if (!url) {
+          console.error("❌ Lambda URL が設定されていません");
+          console.error("  - amplify_outputs.json: custom.logbookToSheetsUrl が空");
+          console.error("  - 環境変数: REACT_APP_LOGBOOK_TO_SHEETS_URL が空");
+          throw new Error("logbookToSheetsUrl 未設定（outputs/env）");
+        }
+
+        const payload = {
+          flightLog: saved,
+          registrationNumber: (saved.registrationNumber || "").trim(),
+          aircraftId: saved.aircraftId || "",
+          aircraftName: aircraft?.name || "",
+          folderId: parentFolderId,
+        };
+        
+        console.log("📤 Lambda へリクエスト送信");
+        console.log("  - URL:", url);
+        console.log("  - Method: POST");
+        console.log("  - Headers:", { "Content-Type": "text/plain;charset=UTF-8" });
+        console.log("  - Payload:", {
+          registrationNumber: payload.registrationNumber,
+          aircraftId: payload.aircraftId,
+          aircraftName: payload.aircraftName,
+          folderId: payload.folderId,
+          flightLog: {
+            pilotName: saved.pilotName,
+            flightDate: saved.flightDate,
+            flightStartTime: saved.flightStartTime,
+            flightEndTime: saved.flightEndTime,
+            flightPurpose: saved.flightPurpose,
+            takeoffLocation: saved.takeoffLocation?.name,
+            landingLocation: saved.landingLocation?.name,
+          }
+        });
 
         // 非同期で発火し、画面遷移はブロックしない
+        const requestStartTime = Date.now();
         fetch(url, {
           method: "POST",
           // Use a "simple" request to avoid CORS preflight
           headers: { "Content-Type": "text/plain;charset=UTF-8" },
-          body: JSON.stringify({
-            flightLog: saved,
-            registrationNumber: (saved.registrationNumber || "").trim(),
-            aircraftId: saved.aircraftId || "",
-            aircraftName: aircraft?.name || "",
-            folderId: parentFolderId,
-          }),
+          body: JSON.stringify(payload),
         })
           .then(async (response) => {
+            const requestDuration = Date.now() - requestStartTime;
+            console.log(`⏱️ Lambda レスポンス受信 (${requestDuration}ms)`);
+            console.log("  - Status:", response.status, response.statusText);
+            console.log("  - Headers:", Object.fromEntries(response.headers.entries()));
+            
             if (!response.ok) {
+              const errorText = await response.text();
+              console.error("❌ Lambda エラーレスポンス:");
+              console.error("  - Status:", response.status, response.statusText);
+              console.error("  - Body:", errorText);
+              console.error("  - CloudWatch Logs:");
+              console.error("    → https://ap-northeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-northeast-1#logsV2:log-groups/log-group/$252Faws$252Flambda$252Famplify-centraweatherdash-logbooktosheetslambdaFAE-VHuRnApm2P8l");
+              console.groupEnd();
               throw new Error(
-                `HTTP ${response.status}: ${response.statusText}`
+                `HTTP ${response.status}: ${response.statusText} - ${errorText}`
               );
             }
             const result = await response.json();
-            console.log("Flight record synced to Google Sheets:", result);
+            console.log("✅ Google Sheets 同期成功!");
+            console.log("  - Spreadsheet ID:", result.spreadsheetId);
+            console.log("  - Tab Name:", result.tabName);
+            console.log("  - Next Row:", result.nextRow);
+            console.log("  - Spreadsheet URL:", `https://docs.google.com/spreadsheets/d/${result.spreadsheetId}/edit`);
+            console.groupEnd();
           })
           .catch((sheetsError) => {
-            console.error("Failed to sync to Google Sheets:", sheetsError);
+            console.error("❌ Google Sheets 同期失敗:");
+            console.error("  - エラー:", sheetsError);
+            console.error("  - Lambda URL:", url);
+            console.error("  - CloudWatch Logs:");
+            console.error("    → https://ap-northeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-northeast-1#logsV2:log-groups/log-group/$252Faws$252Flambda$252Famplify-centraweatherdash-logbooktosheetslambdaFAE-VHuRnApm2P8l");
+            console.error("  - 対処方法:");
+            console.error("    1. CloudWatch Logs でエラー詳細を確認");
+            console.error("    2. Lambda の環境変数を確認 (GOOGLE_CREDENTIALS_JSON, UAS_LOGBOOK_TABLE など)");
+            console.error("    3. DynamoDB テーブル 'CentrosomeData' のアクセス権限を確認");
+            console.groupEnd();
           });
       } catch (sheetsError) {
-        console.error("Failed to sync to Google Sheets:", sheetsError);
+        console.error("❌ Google Sheets 同期の初期化に失敗:", sheetsError);
+        console.groupEnd();
         // UIブロックしないため、ここではアラートを出さない
       }
 
