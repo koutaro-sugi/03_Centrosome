@@ -24,6 +24,9 @@ applications:
             - echo "REACT_APP_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> .env
             - echo "REACT_APP_COMMIT_SHA=$AWS_COMMIT_ID" >> .env
             - echo "REACT_APP_BRANCH=$AWS_BRANCH" >> .env
+            # Amplify outputs の確認
+            - echo "Checking Amplify outputs"
+            - ls -la amplify_outputs.json public/amplify_outputs.json || true
         build:
           commands:
             # テストの実行
@@ -48,32 +51,32 @@ applications:
                 X-XSS-Protection: 1; mode=block
                 Referrer-Policy: strict-origin-when-cross-origin
                 Permissions-Policy: camera=(), microphone=(), geolocation=()
-              
+
               /*.js
                 Cache-Control: public, max-age=31536000, immutable
-              
+
               /*.css
                 Cache-Control: public, max-age=31536000, immutable
-              
+
               /index.html
                 Cache-Control: no-cache, no-store, must-revalidate
-              
+
               /static/media/*
                 Cache-Control: public, max-age=31536000, immutable
               EOF
       artifacts:
         baseDirectory: build
         files:
-          - '**/*'
+          - "**/*"
       cache:
         paths:
           - .npm/**/*
           - node_modules/**/*
       customHeaders:
-        - pattern: '**/*'
+        - pattern: "**/*"
           headers:
-            - key: 'Strict-Transport-Security'
-              value: 'max-age=31536000; includeSubDomains'
-            - key: 'Content-Security-Policy'
+            - key: "Strict-Transport-Security"
+              value: "max-age=31536000; includeSubDomains"
+            - key: "Content-Security-Policy"
               value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.amazonaws.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.amazonaws.com wss://*.amazonaws.com https://*.amplify.aws"
     appRoot: .

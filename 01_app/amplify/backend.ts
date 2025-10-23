@@ -35,8 +35,8 @@ let resolvedAllowedOrigins =
   envAllowedOrigins.length > 0
     ? sanitizeAllowedOrigins(envAllowedOrigins)
     : staticAllowedOrigins.length > 0
-    ? sanitizeAllowedOrigins(staticAllowedOrigins)
-    : defaultAllowedOrigins;
+      ? sanitizeAllowedOrigins(staticAllowedOrigins)
+      : defaultAllowedOrigins;
 
 if (resolvedAllowedOrigins.includes("*") && resolvedAllowedOrigins.length > 1) {
   resolvedAllowedOrigins = sanitizeAllowedOrigins(
@@ -234,9 +234,7 @@ if (logbookToSheets) {
     authType: lambda.FunctionUrlAuthType.NONE,
     cors: {
       allowedOrigins:
-        resolvedAllowedOrigins.length > 0
-          ? resolvedAllowedOrigins
-          : ["*"],
+        resolvedAllowedOrigins.length > 0 ? resolvedAllowedOrigins : ["*"],
       allowedMethods: [lambda.HttpMethod.ALL],
       allowedHeaders: ["*"],
     },
@@ -262,7 +260,8 @@ backend.addOutput({
     },
     logbookToSheetsAllowedOrigins: {
       value: resolvedAllowedOrigins.join(","),
-      description: "Comma-separated allowed origins for logbook-to-sheets Function URL",
+      description:
+        "Comma-separated allowed origins for logbook-to-sheets Function URL",
     },
   },
 });
@@ -274,6 +273,21 @@ interface StaticLogbookConfig {
 }
 
 function loadStaticLogbookConfig(): StaticLogbookConfig {
+  // 静的設定: Lambda ARN/URL と許可オリジンを直接定義
+  return {
+    lambdaArn:
+      "arn:aws:lambda:ap-northeast-1:785197721624:function:amplify-centraweatherdash-logbooktosheetslambdaFAE-VHuRnApm2P8l",
+    lambdaUrl:
+      "https://gtps2ddwkk5ruvisryxsdlyriy0qzios.lambda-url.ap-northeast-1.on.aws/",
+    allowedOrigins: [
+      "https://41dev.org",
+      "https://oma.41dev.org",
+      "http://localhost:3000",
+    ],
+  };
+
+  // 旧実装（correct_amplify_outputs.json を読み込んでいた）
+  /*
   try {
     const configPath = path.join(__dirname, "..", "correct_amplify_outputs.json");
     const raw = fs.readFileSync(configPath, "utf-8");
@@ -320,6 +334,7 @@ function loadStaticLogbookConfig(): StaticLogbookConfig {
   } catch (_error) {
     return {};
   }
+  */
 }
 
 function parseOriginsFromString(value?: string | null): string[] {
