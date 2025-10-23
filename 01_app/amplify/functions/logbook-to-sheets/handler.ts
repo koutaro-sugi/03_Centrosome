@@ -125,21 +125,33 @@ async function putMappedSpreadsheetId(
   const now = new Date();
   const jstTime = new Date(now.getTime() + TZ_OFFSET_MIN * 60 * 1000);
 
-  await ddb.send(
-    new PutCommand({
-      TableName: tableName,
-      Item: {
-        PK: `LOGBOOK#${registrationNumber}`,
-        SK: `AIRCRAFT#${aircraftId}`,
-        entityType: "LOGBOOK_MAPPING",
-        registrationNumber,
-        aircraftId,
-        spreadsheetId,
-        updatedAt: jstTime.toISOString(),
-        createdAt: jstTime.toISOString(),
-      },
-    })
-  );
+  try {
+    // 条件付き書き込み: PK/SK が存在しない場合のみ作成
+    await ddb.send(
+      new PutCommand({
+        TableName: tableName,
+        Item: {
+          PK: `LOGBOOK#${registrationNumber}`,
+          SK: `AIRCRAFT#${aircraftId}`,
+          entityType: "LOGBOOK_MAPPING",
+          registrationNumber,
+          aircraftId,
+          spreadsheetId,
+          updatedAt: jstTime.toISOString(),
+          createdAt: jstTime.toISOString(),
+        },
+        ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
+      })
+    );
+    console.log(`[DynamoDB] Created new mapping: ${registrationNumber} -> ${spreadsheetId}`);
+  } catch (error: any) {
+    if (error.name === "ConditionalCheckFailedException") {
+      // 既に存在する場合は何もしない（正常なケース）
+      console.log(`[DynamoDB] Mapping already exists for ${registrationNumber}, skipping`);
+    } else {
+      throw error;
+    }
+  }
 }
 
 async function deleteMappedSpreadsheetId(
@@ -449,23 +461,37 @@ export const handler = async (
     }
 
     if (!spreadsheetId) {
-      const title = aircraftName
-        ? `${aircraftName}_飛行記録_${registrationNumber}`
-        : `飛行記録_${registrationNumber}`;
-      spreadsheetId = await createSpreadsheetFromTemplate(
-        drive,
-        title,
-        parentFolderIdOverride
-      );
-      // Set timezone/locale for new spreadsheets
-      await ensureSpreadsheetSettings(sheets, spreadsheetId);
-      await putMappedSpreadsheetId(
+      // 再度確認（他のリクエストが既に作成していないか）
+      const existingId = await getMappedSpreadsheetId(
         ddb,
         tableName,
         registrationNumber,
-        aircraftId,
-        spreadsheetId
+        aircraftId
       );
+      
+      if (existingId) {
+        console.log(`[Race Condition] Another request already created spreadsheet: ${existingId}`);
+        spreadsheetId = existingId;
+      } else {
+        const title = aircraftName
+          ? `${aircraftName}_飛行記録_${registrationNumber}`
+          : `飛行記録_${registrationNumber}`;
+        console.log(`[Creating] New spreadsheet for ${registrationNumber}`);
+        spreadsheetId = await createSpreadsheetFromTemplate(
+          drive,
+          title,
+          parentFolderIdOverride
+        );
+        // Set timezone/locale for new spreadsheets
+        await ensureSpreadsheetSettings(sheets, spreadsheetId);
+        await putMappedSpreadsheetId(
+          ddb,
+          tableName,
+          registrationNumber,
+          aircraftId,
+          spreadsheetId
+        );
+      }
     }
     // Also enforce settings when reusing an existing sheet (idempotent)
     await ensureSpreadsheetSettings(sheets, spreadsheetId);

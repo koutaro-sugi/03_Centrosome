@@ -498,17 +498,25 @@ export const Logbook: React.FC = () => {
       // Enter: フォーカスされた要素のアクション実行
       if (e.key === "Enter" && !e.shiftKey) {
         const activeElement = document.activeElement;
-        
+
         // チェックボックスの場合
-        if (activeElement && activeElement instanceof HTMLInputElement && activeElement.type === "checkbox") {
+        if (
+          activeElement &&
+          activeElement instanceof HTMLInputElement &&
+          activeElement.type === "checkbox"
+        ) {
           e.preventDefault();
           const checkbox = activeElement;
           checkbox.checked = !checkbox.checked;
-          checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+          checkbox.dispatchEvent(new Event("change", { bubbles: true }));
         }
-        
+
         // テキストフィールドの場合（フォーカス状態でEnter）
-        if (activeElement && activeElement instanceof HTMLInputElement && activeElement.type === "text") {
+        if (
+          activeElement &&
+          activeElement instanceof HTMLInputElement &&
+          activeElement.type === "text"
+        ) {
           // テキストフィールドでは何もしない（デフォルトの改行動作を許可）
         }
       }
@@ -697,7 +705,7 @@ export const Logbook: React.FC = () => {
       try {
         console.group("📊 Google Sheets 同期開始");
         console.log("⏰ 開始時刻:", new Date().toISOString());
-        
+
         // まず outputs を試し、なければ環境変数フォールバック
         let url: string | undefined;
         let parentFolderId: string | undefined;
@@ -713,20 +721,29 @@ export const Logbook: React.FC = () => {
             console.log("  - Lambda URL:", url);
             console.log("  - Parent Folder ID:", parentFolderId || "(未設定)");
           } else {
-            console.warn("⚠️ amplify_outputs.json の取得に失敗 (HTTP", outputsRes.status, ")");
+            console.warn(
+              "⚠️ amplify_outputs.json の取得に失敗 (HTTP",
+              outputsRes.status,
+              ")"
+            );
           }
         } catch (outputsError) {
-          console.warn("⚠️ amplify_outputs.json の読み込みエラー:", outputsError);
+          console.warn(
+            "⚠️ amplify_outputs.json の読み込みエラー:",
+            outputsError
+          );
         }
-        
+
         if (!url) {
           url = process.env.REACT_APP_LOGBOOK_TO_SHEETS_URL;
           console.log("📌 環境変数から Lambda URL を取得:", url);
         }
-        
+
         if (!url) {
           console.error("❌ Lambda URL が設定されていません");
-          console.error("  - amplify_outputs.json: custom.logbookToSheetsUrl が空");
+          console.error(
+            "  - amplify_outputs.json: custom.logbookToSheetsUrl が空"
+          );
           console.error("  - 環境変数: REACT_APP_LOGBOOK_TO_SHEETS_URL が空");
           throw new Error("logbookToSheetsUrl 未設定（outputs/env）");
         }
@@ -738,11 +755,13 @@ export const Logbook: React.FC = () => {
           aircraftName: aircraft?.name || "",
           folderId: parentFolderId,
         };
-        
+
         console.log("📤 Lambda へリクエスト送信");
         console.log("  - URL:", url);
         console.log("  - Method: POST");
-        console.log("  - Headers:", { "Content-Type": "text/plain;charset=UTF-8" });
+        console.log("  - Headers:", {
+          "Content-Type": "text/plain;charset=UTF-8",
+        });
         console.log("  - Payload:", {
           registrationNumber: payload.registrationNumber,
           aircraftId: payload.aircraftId,
@@ -756,7 +775,7 @@ export const Logbook: React.FC = () => {
             flightPurpose: saved.flightPurpose,
             takeoffLocation: saved.takeoffLocation?.name,
             landingLocation: saved.landingLocation?.name,
-          }
+          },
         });
 
         // 非同期で発火し、画面遷移はブロックしない
@@ -771,15 +790,24 @@ export const Logbook: React.FC = () => {
             const requestDuration = Date.now() - requestStartTime;
             console.log(`⏱️ Lambda レスポンス受信 (${requestDuration}ms)`);
             console.log("  - Status:", response.status, response.statusText);
-            console.log("  - Headers:", Object.fromEntries(response.headers.entries()));
-            
+            console.log(
+              "  - Headers:",
+              Object.fromEntries(response.headers.entries())
+            );
+
             if (!response.ok) {
               const errorText = await response.text();
               console.error("❌ Lambda エラーレスポンス:");
-              console.error("  - Status:", response.status, response.statusText);
+              console.error(
+                "  - Status:",
+                response.status,
+                response.statusText
+              );
               console.error("  - Body:", errorText);
               console.error("  - CloudWatch Logs:");
-              console.error("    → https://ap-northeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-northeast-1#logsV2:log-groups/log-group/$252Faws$252Flambda$252Famplify-centraweatherdash-logbooktosheetslambdaFAE-VHuRnApm2P8l");
+              console.error(
+                "    → https://ap-northeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-northeast-1#logsV2:log-groups/log-group/$252Faws$252Flambda$252Famplify-centraweatherdash-logbooktosheetslambdaFAE-VHuRnApm2P8l"
+              );
               console.groupEnd();
               throw new Error(
                 `HTTP ${response.status}: ${response.statusText} - ${errorText}`
@@ -790,7 +818,10 @@ export const Logbook: React.FC = () => {
             console.log("  - Spreadsheet ID:", result.spreadsheetId);
             console.log("  - Tab Name:", result.tabName);
             console.log("  - Next Row:", result.nextRow);
-            console.log("  - Spreadsheet URL:", `https://docs.google.com/spreadsheets/d/${result.spreadsheetId}/edit`);
+            console.log(
+              "  - Spreadsheet URL:",
+              `https://docs.google.com/spreadsheets/d/${result.spreadsheetId}/edit`
+            );
             console.groupEnd();
           })
           .catch((sheetsError) => {
@@ -798,11 +829,17 @@ export const Logbook: React.FC = () => {
             console.error("  - エラー:", sheetsError);
             console.error("  - Lambda URL:", url);
             console.error("  - CloudWatch Logs:");
-            console.error("    → https://ap-northeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-northeast-1#logsV2:log-groups/log-group/$252Faws$252Flambda$252Famplify-centraweatherdash-logbooktosheetslambdaFAE-VHuRnApm2P8l");
+            console.error(
+              "    → https://ap-northeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-northeast-1#logsV2:log-groups/log-group/$252Faws$252Flambda$252Famplify-centraweatherdash-logbooktosheetslambdaFAE-VHuRnApm2P8l"
+            );
             console.error("  - 対処方法:");
             console.error("    1. CloudWatch Logs でエラー詳細を確認");
-            console.error("    2. Lambda の環境変数を確認 (GOOGLE_CREDENTIALS_JSON, UAS_LOGBOOK_TABLE など)");
-            console.error("    3. DynamoDB テーブル 'CentrosomeData' のアクセス権限を確認");
+            console.error(
+              "    2. Lambda の環境変数を確認 (GOOGLE_CREDENTIALS_JSON, UAS_LOGBOOK_TABLE など)"
+            );
+            console.error(
+              "    3. DynamoDB テーブル 'CentrosomeData' のアクセス権限を確認"
+            );
             console.groupEnd();
           });
       } catch (sheetsError) {
@@ -1421,7 +1458,9 @@ export const Logbook: React.FC = () => {
                       }
                       onBlur={() => setEditingNote(null)}
                       autoFocus
-                      inputProps={{ tabIndex: INSPECTION_ITEMS.indexOf(item) + 100 }}
+                      inputProps={{
+                        tabIndex: INSPECTION_ITEMS.indexOf(item) + 100,
+                      }}
                     />
                   </Box>
                 )}
