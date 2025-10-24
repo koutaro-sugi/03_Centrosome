@@ -122,3 +122,8 @@ applications:
               value: "max-age=31536000; includeSubDomains"
             - key: "Content-Security-Policy"
               value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.amazonaws.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.amazonaws.com wss://*.amazonaws.com https://*.amplify.aws"
+    backend:
+      phases:
+        build:
+          commands:
+            - "echo 'Backend build phase (no backend resources to build)'"

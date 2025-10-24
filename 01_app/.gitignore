@@ -25,6 +25,7 @@ yarn-error.log*
 
 # Amplify
 amplify_outputs.json
+!public/amplify_outputs.json
 .amplify/
 amplify/.config/
 amplify/backend/.temp
