@@ -36,9 +36,24 @@ applications:
             - "echo 'REACT_APP_BRANCH=$AWS_BRANCH' >> .env"
         build:
           commands:
-            # Amplify outputs の確認
+            # Amplify outputs の確認と作成（ビルド用プレースホルダー）
             - "echo 'Checking Amplify outputs'"
-            - "ls -la amplify_outputs.json public/amplify_outputs.json || true"
+            - |
+              if [ ! -f amplify_outputs.json ]; then
+                echo "Creating placeholder amplify_outputs.json for build"
+                cat > amplify_outputs.json <<EOF
+              {
+                "version": "1",
+                "auth": {
+                  "aws_region": "ap-northeast-1",
+                  "user_pool_id": "PLACEHOLDER",
+                  "user_pool_client_id": "PLACEHOLDER",
+                  "identity_pool_id": "PLACEHOLDER"
+                }
+              }
+              EOF
+              fi
+            - "ls -la amplify_outputs.json || true"
             # テストの実行（一時的にスキップ - 38テスト失敗のため）
             # - "npm run test -- --ci --coverage --watchAll=false"
             # TypeScriptの型チェック（一時的にスキップ - amplify_outputs.json不在のため）
