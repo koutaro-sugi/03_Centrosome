@@ -70,7 +70,7 @@ applications:
         postBuild:
           commands:
             # amplify_outputs.jsonをbuildディレクトリにコピー
-            - "cp amplify_outputs.json build/amplify_outputs.json || echo 'amplify_outputs.json not found'"
+            - "cp amplify_outputs.json build/amplify_outputs.json && echo 'amplify_outputs.json copied successfully' && ls -la build/amplify_outputs.json || echo 'ERROR: amplify_outputs.json copy failed'"
             # セキュリティヘッダーの設定用ファイル作成
             - |
               cat > build/_headers <<EOF
@@ -93,6 +93,8 @@ applications:
               /static/media/*
                 Cache-Control: public, max-age=31536000, immutable
               EOF
+            # postBuild完了後の確認
+            - "echo 'postBuild completed' && ls -la build/ | head -25"
       artifacts:
         baseDirectory: build
         files:
