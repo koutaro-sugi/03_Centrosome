@@ -21,6 +21,8 @@ import {
   GlobalStyles,
   PaletteMode,
   useTheme,
+  Typography,
+  Button,
 } from "@mui/material";
 import { Amplify } from "aws-amplify";
 import { AuthProvider } from "./contexts/AuthContextV2";
@@ -36,66 +38,92 @@ import { initializeApp } from "./utils/initializeApp";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { logVersionInfo } from "./lib/version";
 
+type AmplifyConfigState =
+  | { status: "loading"; message?: undefined }
+  | { status: "ready"; message?: undefined }
+  | { status: "error"; message: string };
+
 // Amplify設定はランタイムに /amplify_outputs.json から読み込む
 // （src配下の古いファイルをバンドルしないため）
-const useConfigureAmplify = () => {
-  const [configured, setConfigured] = useState(false);
+const useAmplifyConfiguration = (): AmplifyConfigState => {
+  const [state, setState] = useState<AmplifyConfigState>({ status: "loading" });
 
   useEffect(() => {
     // Log version info on app start
     logVersionInfo();
     let cancelled = false;
-    (async () => {
-      // Load amplify_outputs.json and configure Amplify
-      try {
-        const res = await fetch(`/amplify_outputs.json?v=${Date.now()}`, { cache: 'no-store' });
-        
-        if (res.ok) {
-          const outputs = await res.json();
-          if (!cancelled && outputs) {
-            (window as any).__AMPLIFY_OUTPUTS__ = outputs;
-            
-            try {
-              Amplify.configure(outputs);
-              
-              if (outputs?.auth?.user_pool_id && outputs?.auth?.user_pool_client_id) {
-                setConfigured(true);
-              } else {
-                console.error('[Centra] Invalid auth configuration in amplify_outputs.json');
-                setConfigured(false);
-              }
-            } catch (configError) {
-              console.error('[Centra] Error configuring Amplify:', configError);
-              setConfigured(false);
-            }
-          }
-        } else {
-          console.error('[Centra] Failed to load amplify_outputs.json:', res.status, res.statusText);
-          // Try to load from src directory as fallback
-          try {
-            const fallbackRes = await fetch(`/src/amplify_outputs.json?v=${Date.now()}`, { cache: 'no-store' });
-            if (fallbackRes.ok) {
-              const outputs = await fallbackRes.json();
-              if (!cancelled && outputs?.auth) {
-                Amplify.configure(outputs);
-                setConfigured(true);
-              }
-            }
-          } catch (fallbackError) {
-            console.error('[Centra] Fallback also failed:', fallbackError);
-          }
-        }
-      } catch (e) {
-        console.error('[Centra] Failed to load amplify_outputs.json:', e);
-        setConfigured(false);
+
+    const loadOutputs = async (path: string) => {
+      const res = await fetch(`${path}?v=${Date.now()}`, { cache: "no-store" });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} ${res.statusText}`.trim());
       }
-    })();
+
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        throw new Error(`Invalid JSON returned from ${path}`);
+      }
+    };
+
+    const configureAmplify = async () => {
+      const candidates = ["/amplify_outputs.json", "/src/amplify_outputs.json"];
+      let lastError: Error | null = null;
+
+      for (const candidate of candidates) {
+        try {
+          console.info(`[Centra] Loading Amplify outputs from ${candidate}`);
+          const outputs = await loadOutputs(candidate);
+
+          if (!outputs?.auth?.user_pool_id || !outputs?.auth?.user_pool_client_id) {
+            throw new Error("Missing Cognito configuration in amplify_outputs.json");
+          }
+
+          (window as any).__AMPLIFY_OUTPUTS__ = outputs;
+
+          try {
+            Amplify.configure(outputs);
+          } catch (configError) {
+            throw new Error(
+              configError instanceof Error
+                ? configError.message
+                : String(configError)
+            );
+          }
+
+          if (!cancelled) {
+            setState({ status: "ready" });
+          }
+          return;
+        } catch (error) {
+          lastError =
+            error instanceof Error ? error : new Error(String(error));
+          console.error(
+            `[Centra] Failed to initialize Amplify using ${candidate}:`,
+            lastError
+          );
+        }
+      }
+
+      if (!cancelled) {
+        setState({
+          status: "error",
+          message:
+            lastError?.message || "Unknown error while loading amplify_outputs.json",
+        });
+      }
+    };
+
+    configureAmplify();
+
     return () => {
       cancelled = true;
     };
   }, []);
 
-  return configured;
+  return state;
 };
 
 // テーマモード用のコンテキスト
@@ -248,7 +276,7 @@ function AppLayout() {
 }
 
 function App() {
-  const ampConfigured = useConfigureAmplify();
+  const amplifyConfigState = useAmplifyConfiguration();
   // localStorageからテーマモードを取得
   const [mode, setMode] = useState<PaletteMode>(() => {
     const savedMode = localStorage.getItem("themeMode");
@@ -278,7 +306,7 @@ function App() {
   // 動的にテーマを作成
   const theme = useMemo(() => createTheme(getDesignTokens(mode)), [mode]);
 
-  if (!ampConfigured) {
+  if (amplifyConfigState.status === "loading") {
     return (
       <Box
         sx={{
@@ -289,6 +317,39 @@ function App() {
         }}
       >
         初期化中...
+      </Box>
+    );
+  }
+
+  if (amplifyConfigState.status === "error") {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          flexDirection: "column",
+          gap: 2,
+          p: 3,
+          textAlign: "center",
+        }}
+      >
+        <Typography variant="h5" component="h1" gutterBottom>
+          Amplify の初期化に失敗しました
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          {amplifyConfigState.message}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          リロードしても解決しない場合は、`/amplify_outputs.json` の配信設定を確認してください。
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={() => window.location.reload()}
+        >
+          再読み込み
+        </Button>
       </Box>
     );
   }

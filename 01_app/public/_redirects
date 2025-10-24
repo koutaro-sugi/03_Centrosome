@@ -1,2 +1,4 @@
-/*    /index.html   200
-
+/amplify_outputs.json    /amplify_outputs.json    200!
+/health.json             /health.json             200!
+/force-clear-cache.html  /force-clear-cache.html  200!
+/*                       /index.html              200
