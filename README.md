@@ -193,12 +193,45 @@ npm test            # テスト実行
 3. **Jest**でテストコード作成
 4. **日本語**でコメント・ドキュメント記述
 
+## 🔢 バージョン管理
+
+### バージョン形式
+```
+MAJOR.MINOR.PATCH-COMMIT_HASH
+例: 0.1.0-033777f
+```
+
+- **MAJOR**: 破壊的変更、メジャーリライト
+- **MINOR**: 新機能、重要な更新
+- **PATCH**: バグ修正、マイナー変更
+- **COMMIT_HASH**: Gitコミットハッシュ（7文字）
+
+### バージョン確認方法
+1. **UI**: Sidebarの右下に表示
+2. **コンソール**: ブラウザ開発者ツールでアプリ起動時に表示
+3. **ファイル**: `99_docs/version/VERSIONS.md`
+
+### バージョン更新
+```bash
+# パッチバージョンアップ（バグ修正）
+./scripts/update-version.sh patch "fix(ui): ボタンの配置を修正"
+
+# マイナーバージョンアップ（新機能）
+./scripts/update-version.sh minor "feat(map): 地図表示機能を追加"
+
+# メジャーバージョンアップ（破壊的変更）
+./scripts/update-version.sh major "feat!: API v2への移行"
+```
+
+### バージョン履歴
+詳細は`99_docs/version/VERSIONS.md`を参照
+
 ## 📞 サポート
 
 - **プロジェクト**: 03_Centrosome
 - **ベースプロジェクト**: 01_A1-Console
-- **更新日**: 2025-06-30
+- **更新日**: 2024-10-24
 
 ---
 
-**Centrosome** - *細胞の中心体のように、UAVシステムの中心となる統合監視プラットフォーム*# Test deployment - Thu Sep 25 12:01:05 JST 2025
+**Centrosome** - *細胞の中心体のように、UAVシステムの中心となる統合監視プラットフォーム*
