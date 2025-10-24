@@ -7,6 +7,7 @@ import {
   PutCommand,
   DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 
 // Constants
 const ENTRY_ROW_START = 5;
@@ -68,10 +69,67 @@ function toJstHHmm(iso: string): string {
   return d.toISOString().slice(11, 16);
 }
 
+// SSM Parameter Store から認証情報を読み込む（コールドスタート時に一度だけ実行）
+let cachedGoogleCredentials: string | null = null;
+
+async function getGoogleCredentialsFromSSM(): Promise<string> {
+  if (cachedGoogleCredentials) {
+    return cachedGoogleCredentials;
+  }
+
+  // 直接環境変数に設定されている場合はそれを使用
+  if (process.env.GOOGLE_CREDENTIALS_JSON) {
+    cachedGoogleCredentials = process.env.GOOGLE_CREDENTIALS_JSON;
+    return cachedGoogleCredentials;
+  }
+
+  // SSMから読み込む設定がある場合
+  const ssmConfigRaw = process.env.AMPLIFY_SSM_ENV_CONFIG;
+  if (!ssmConfigRaw) {
+    throw new Error(
+      "Missing GOOGLE_CREDENTIALS_JSON and AMPLIFY_SSM_ENV_CONFIG"
+    );
+  }
+
+  try {
+    const ssmConfig = JSON.parse(ssmConfigRaw);
+    const credentialsConfig = ssmConfig.GOOGLE_CREDENTIALS_JSON;
+    if (!credentialsConfig || !credentialsConfig.path) {
+      throw new Error(
+        "Invalid AMPLIFY_SSM_ENV_CONFIG: missing GOOGLE_CREDENTIALS_JSON.path"
+      );
+    }
+
+    const ssmClient = new SSMClient({
+      region: process.env.AWS_REGION || "ap-northeast-1",
+    });
+    const response = await ssmClient.send(
+      new GetParameterCommand({
+        Name: credentialsConfig.path,
+        WithDecryption: true,
+      })
+    );
+
+    if (!response.Parameter || !response.Parameter.Value) {
+      throw new Error(`SSM Parameter not found: ${credentialsConfig.path}`);
+    }
+
+    cachedGoogleCredentials = response.Parameter.Value;
+    console.log(
+      `[SSM] Successfully loaded credentials from ${credentialsConfig.path}`
+    );
+    return cachedGoogleCredentials;
+  } catch (error: any) {
+    console.error("[SSM] Failed to load credentials:", error);
+    throw new Error(
+      `Failed to load GOOGLE_CREDENTIALS_JSON from SSM: ${error.message}`
+    );
+  }
+}
+
 // Google clients
 async function getGoogleClients() {
-  const credsRaw = process.env.GOOGLE_CREDENTIALS_JSON;
-  if (!credsRaw) throw new Error("Missing GOOGLE_CREDENTIALS_JSON");
+  const credsRaw = await getGoogleCredentialsFromSSM();
   const credentials = JSON.parse(credsRaw);
   if (credentials.private_key) {
     credentials.private_key = credentials.private_key.replace(/\\n/g, "\n");
@@ -106,8 +164,7 @@ async function getMappedSpreadsheetId(
     new GetCommand({
       TableName: tableName,
       Key: {
-        PK: `LOGBOOK#${registrationNumber}`,
-        SK: `AIRCRAFT#${aircraftId}`,
+        registrationNumber,
       },
     })
   );
@@ -126,28 +183,29 @@ async function putMappedSpreadsheetId(
   const jstTime = new Date(now.getTime() + TZ_OFFSET_MIN * 60 * 1000);
 
   try {
-    // 条件付き書き込み: PK/SK が存在しない場合のみ作成
+    // 条件付き書き込み: registrationNumber が存在しない場合のみ作成
     await ddb.send(
       new PutCommand({
         TableName: tableName,
         Item: {
-          PK: `LOGBOOK#${registrationNumber}`,
-          SK: `AIRCRAFT#${aircraftId}`,
-          entityType: "LOGBOOK_MAPPING",
           registrationNumber,
           aircraftId,
           spreadsheetId,
           updatedAt: jstTime.toISOString(),
           createdAt: jstTime.toISOString(),
         },
-        ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
+        ConditionExpression: "attribute_not_exists(registrationNumber)",
       })
     );
-    console.log(`[DynamoDB] Created new mapping: ${registrationNumber} -> ${spreadsheetId}`);
+    console.log(
+      `[DynamoDB] Created new mapping: ${registrationNumber} -> ${spreadsheetId}`
+    );
   } catch (error: any) {
     if (error.name === "ConditionalCheckFailedException") {
       // 既に存在する場合は何もしない（正常なケース）
-      console.log(`[DynamoDB] Mapping already exists for ${registrationNumber}, skipping`);
+      console.log(
+        `[DynamoDB] Mapping already exists for ${registrationNumber}, skipping`
+      );
     } else {
       throw error;
     }
@@ -164,8 +222,7 @@ async function deleteMappedSpreadsheetId(
     new DeleteCommand({
       TableName: tableName,
       Key: {
-        PK: `LOGBOOK#${registrationNumber}`,
-        SK: `AIRCRAFT#${aircraftId}`,
+        registrationNumber,
       },
     })
   );
@@ -468,9 +525,11 @@ export const handler = async (
         registrationNumber,
         aircraftId
       );
-      
+
       if (existingId) {
-        console.log(`[Race Condition] Another request already created spreadsheet: ${existingId}`);
+        console.log(
+          `[Race Condition] Another request already created spreadsheet: ${existingId}`
+        );
         spreadsheetId = existingId;
       } else {
         const title = aircraftName

@@ -10,4 +10,8 @@ export const auth = defineAuth({
       mutable: true,
     },
   },
+  // SRP認証フローを有効化
+  access: (allow) => [
+    allow.authenticated().to(["read", "write"]),
+  ],
 });
