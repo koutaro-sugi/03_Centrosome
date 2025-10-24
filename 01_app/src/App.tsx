@@ -34,12 +34,16 @@ import { Logbook } from "./pages/Logbook";
 import { FlightPlanProvider } from "./contexts/FlightPlanContext";
 import { initializeApp } from "./utils/initializeApp";
 import { OfflineIndicator } from "./components/OfflineIndicator";
+import { logVersionInfo } from "./lib/version";
+
 // Amplify設定はランタイムに /amplify_outputs.json から読み込む
 // （src配下の古いファイルをバンドルしないため）
 const useConfigureAmplify = () => {
   const [configured, setConfigured] = useState(false);
 
   useEffect(() => {
+    // Log version info on app start
+    logVersionInfo();
     let cancelled = false;
     (async () => {
       // Load amplify_outputs.json and configure Amplify

@@ -12,6 +12,7 @@ import {
 import { Flight, MenuBook, Logout } from '@mui/icons-material';
 import { LazyImage } from './LazyImage';
 import { useAuth } from '../contexts/AuthContextV2';
+import { getVersion } from '../lib/version';
 
 const SidebarContainer = styled(Box)(() => ({
   width: 165,
@@ -134,7 +135,7 @@ export const Sidebar: React.FC = () => {
         {/* Bottom section with spacer */}
         <Box sx={{ flexGrow: 1 }} />
         
-        <List sx={{ padding: 0, marginBottom: 2 }}>
+        <List sx={{ padding: 0, marginBottom: 1 }}>
           <ListItem disablePadding>
             <StyledListItemButton onClick={handleLogout}>
               <StyledListItemIcon>
@@ -144,6 +145,19 @@ export const Sidebar: React.FC = () => {
             </StyledListItemButton>
           </ListItem>
         </List>
+        
+        {/* Version Display */}
+        <Box 
+          sx={{ 
+            padding: '8px 12px',
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontSize: '10px',
+            textAlign: 'center',
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+          }}
+        >
+          v{getVersion()}
+        </Box>
       </MenuContainer>
     </SidebarContainer>
   );
