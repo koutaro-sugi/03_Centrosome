@@ -134,3 +134,9 @@ build/
 /playwright/.cache/
 # Ignore generated env JSONs with secrets
 scripts/amplify/env.*.json
+
+# Lambda function build artifacts
+01_app/amplify/functions/*/index.js
+01_app/amplify/functions/*/index.cjs
+01_app/amplify/functions/*/*.test.ts
+01_app/amplify/functions/*/*.test.js

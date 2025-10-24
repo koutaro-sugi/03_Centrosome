@@ -8,16 +8,27 @@ applications:
             - "node --version"
             - "npm --version"
             - "npm ci --prefer-offline --no-audit --no-fund"
-            # 環境変数の設定
+            # 環境変数の設定（.envファイルを作成）
             - |
               if [ "$AWS_BRANCH" = "main" ]; then
                 echo "Building for production"
-                cp .env.production .env
+                if [ -f .env.production ]; then
+                  cp .env.production .env
+                else
+                  echo "# Production environment" > .env
+                  echo "# 環境変数はAmplify Consoleで設定されます" >> .env
+                fi
               elif [ "$AWS_BRANCH" = "staging" ]; then
                 echo "Building for staging"
-                cp .env.staging .env
+                if [ -f .env.staging ]; then
+                  cp .env.staging .env
+                else
+                  echo "# Staging environment" > .env
+                  echo "# 環境変数はAmplify Consoleで設定されます" >> .env
+                fi
               else
                 echo "Building for development"
+                touch .env
               fi
             # ビルド情報の追加
             - 'echo ''REACT_APP_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")'' >> .env'
