@@ -33,9 +33,19 @@ async function clearClientCachesDev() {
 /**
  * UASポートの自動初期化
  * DBにデータがない場合のみ初期化を実行
+ * 注意: この関数は認証後に呼び出す必要があります
  */
 export async function autoInitializeUASPorts() {
   try {
+    // 認証状態を確認（未認証の場合はスキップ）
+    const { getCurrentUser } = await import('aws-amplify/auth');
+    try {
+      await getCurrentUser();
+    } catch (error) {
+      console.log('User not authenticated, skipping UAS ports initialization');
+      return;
+    }
+    
     console.log('Checking UAS ports in database...');
     
     // 既存のポートを確認
