@@ -69,6 +69,8 @@ applications:
               find build -name "*.js" -o -name "*.css" | head -10 | xargs ls -lh
         postBuild:
           commands:
+            # amplify_outputs.jsonをbuildディレクトリにコピー
+            - "cp amplify_outputs.json build/amplify_outputs.json || echo 'amplify_outputs.json not found'"
             # セキュリティヘッダーの設定用ファイル作成
             - |
               cat > build/_headers <<EOF
